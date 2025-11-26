@@ -1,0 +1,4 @@
+[submodule "kmp-build-plugin"]
+	path = kmp-build-plugin
+	url = git@github.com:Pedro-Bachiega/kmp-build-plugin.git
+	branch = main
