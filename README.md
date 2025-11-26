@@ -194,8 +194,8 @@ dependencies {
     implementation("io.github.pedro-bachiega:easy-navigation-core:<version>")
 
     // KSP processors
-    ksp("io.github.pedro-bachiega:easy-navigation-processor-library:<version>")
-    ksp("io.github.pedro-bachiega:easy-navigation-processor-application:<version>")
+    ksp("io.github.pedro-bachiega:easy-navigation-application-processor:<version>")
+    ksp("io.github.pedro-bachiega:easy-navigation-library-processor:<version>")
 }
 ```
 

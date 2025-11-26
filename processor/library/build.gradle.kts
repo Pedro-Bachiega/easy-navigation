@@ -9,6 +9,8 @@ plugins {
     alias(libs.plugins.vanniktech.publish)
 }
 
+apply(from = "$rootDir/versioning.gradle.kts")
+
 tasks.withType<AbstractPublishToMaven>().configureEach {
     dependsOn(tasks.withType<Sign>())
 }
