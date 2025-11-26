@@ -1,0 +1,133 @@
+# ------------------------------------------------------------------------------------------------ #
+[versions]
+## --- Plugins and more general stuff --- ##
+android-plugin = "8.13.1"
+jacoco = "0.8.9"
+dexcount = "4.0.0"
+detekt = "1.23.8"
+ktlint = "11.6.1"
+
+## --- Build Config and SDK --- ##
+build-version-name = "1.0.0"
+build-version-code = "1"
+build-sdk-min-toolkit = "28"
+build-sdk-min-sample = "28"
+build-sdk-compile = "36"
+build-sdk-target = "36"
+build-tools = "35.0.0"
+
+## JetBrains
+jetbrains-compose = "1.9.3"
+jetbrains-compose-lifecycle = "2.9.6"
+jetbrains-compose-navigation = "1.0.0-alpha05"
+jetbrains-coroutines = "1.10.2"
+jetbrains-datetime = "0.7.1"
+jetbrains-dokka = "2.1.0"
+jetbrains-kotlin = "2.2.21"
+jetbrains-kotlin-gradle-dsl = "6.4.2"
+jetbrains-kover = "0.9.3"
+jetbrains-serialization = "1.9.0"
+
+## AndroidX
+androidx-appcompat = "1.7.1"
+androidx-biometric = "1.2.0-alpha05"
+androidx-datastore = "1.1.7"
+
+## AndroidX Compose
+androidx-compose-activity = "1.11.0"
+androidx-compose-core = "1.9.0"
+
+## Google
+google-ksp = "2.3.0"
+
+## Gradle
+gradle-publish = "1.3.1"
+vanniktech-publish = "0.35.0"
+
+## Toolkit
+toolkit-arch = "2.0.0-rc06"
+
+## Tools
+koin = "4.1.1"
+
+# ------------------------------------------------------------------------------------------------ #
+[libraries]
+## JetBrains
+jetbrains-stdlib-jdk8 = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8", version.ref = "jetbrains-kotlin" }
+jetbrains-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "jetbrains-coroutines" }
+jetbrains-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "jetbrains-coroutines" }
+jetbrains-coroutines-darwin = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-darwin", version.ref = "jetbrains-coroutines" }
+jetbrains-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "jetbrains-coroutines" }
+jetbrains-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "jetbrains-datetime" }
+jetbrains-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "jetbrains-serialization" }
+
+## AndroidX
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
+androidx-compose-activity = { module = "androidx.activity:activity-compose", version.ref = "androidx-compose-activity" }
+
+## JetBrains Compose
+jetbrains-compose-lifecycle-runtime = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "jetbrains-compose-lifecycle" }
+jetbrains-compose-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "jetbrains-compose-lifecycle" }
+jetbrains-compose-navigation3-ui = { group = "org.jetbrains.androidx.navigation3", name = "navigation3-ui", version.ref = "jetbrains-compose-navigation" }
+
+## Toolkit
+toolkit-arch-event-observer-core = { group = "io.github.matheus-corregiari", name = "event-observer", version.ref = "toolkit-arch" }
+toolkit-arch-event-observer-compose = { group = "io.github.matheus-corregiari", name = "event-observer-compose", version.ref = "toolkit-arch" }
+toolkit-arch-splinter = { group = "io.github.matheus-corregiari", name = "splinter", version.ref = "toolkit-arch" }
+toolkit-arch-lumber = { group = "io.github.matheus-corregiari", name = "lumber", version.ref = "toolkit-arch" }
+toolkit-arch-android-util = { group = "io.github.matheus-corregiari", name = "util", version.ref = "toolkit-arch" }
+
+## Tools
+google-ksp = { group = "com.google.devtools.ksp", name = "symbol-processing-api", version.ref = "google-ksp" }
+koin-compose = { group = "io.insert-koin", name = "koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin" }
+koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
+lint-detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-formatting", version.ref = "detekt" }
+
+# --------------------------------------------- Plugin Libraries --------------------------------------------------- #
+## JetBrains
+plugin-jetbrains-dokka = { group = "org.jetbrains.dokka", name = "dokka-gradle-plugin", version.ref = "jetbrains-dokka" }
+plugin-jetbrains-kotlin-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "jetbrains-kotlin" }
+plugin-jetbrains-kover = { group = "org.jetbrains.kotlinx", name = "kover-gradle-plugin", version.ref = "jetbrains-kover" }
+
+## Androidx
+plugin-androidx-plugin = { group = "com.android.tools.build", name = "gradle", version.ref = "android-plugin" }
+
+## Lint
+plugin-lint-detekt = { group = "io.gitlab.arturbosch.detekt", name = "detekt-gradle-plugin", version.ref = "detekt" }
+plugin-lint-ktlint = { group = "org.jlleitschuh.gradle.ktlint-idea", name = "org.jlleitschuh.gradle.ktlint-idea.gradle.plugin", version.ref = "ktlint" }
+
+## Tools
+plugin-vanniktech-publish = { group = "com.vanniktech.maven.publish", name = "com.vanniktech.maven.publish.gradle.plugin", version.ref = "vanniktech-publish" }
+
+# ------------------------------------------------------------------------------------------------ #
+[plugins]
+
+## Android
+android-application = { id = "com.android.application", version.ref = "android-plugin" }
+android-library = { id = "com.android.library", version.ref = "android-plugin" }
+
+## Android
+google-ksp = { id = "com.google.devtools.ksp", version.ref = "google-ksp" }
+
+## JetBrains
+jetbrains-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "jetbrains-kotlin" }
+jetbrains-compose-kotlin = { id = "org.jetbrains.compose", version.ref = "jetbrains-compose" }
+jetbrains-dokka = { id = "org.jetbrains.dokka", version.ref = "jetbrains-dokka" }
+jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "jetbrains-kotlin" }
+jetbrains-kotlin-dsl = { id = "org.gradle.kotlin.kotlin-dsl", version.ref = "jetbrains-kotlin-gradle-dsl" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrains-kotlin" }
+jetbrains-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "jetbrains-kotlin" }
+jetbrains-kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "jetbrains-kover" }
+jetbrains-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrains-kotlin" }
+
+## Tools to make my life easier
+dexcount = { id = "com.getkeepsafe.dexcount", version.ref = "dexcount" }
+gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
+lint-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+lint-ktlint = { id = "org.jlleitschuh.gradle.ktlint-idea", version.ref = "ktlint" }
+quality-jacoco = { id = "jacoco" }
+vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-publish" }
+
+# ------------------------------------------------------------------------------------------------ #
+[bundles]
