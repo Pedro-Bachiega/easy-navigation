@@ -16,14 +16,14 @@ import androidx.compose.ui.unit.dp
 import com.pedrobneto.navigation.annotation.NavigationEntry
 import com.pedrobneto.navigation.core.LocalNavigationController
 import com.pedrobneto.navigation.core.launch.LaunchStrategy
-import com.pedrobneto.navigation.model.SecondScreenRoute
-import com.pedrobneto.navigation.model.ThirdScreenRoute
+import com.pedrobneto.navigation.model.FirstScreenRoute
+import com.pedrobneto.navigation.model.FourthScreenRoute
 
 @Composable
-@NavigationEntry(route = ThirdScreenRoute::class, deeplinks = ["/third"])
-internal fun ThirdScreenComposable(
+@NavigationEntry(route = FourthScreenRoute::class, deeplinks = ["/{pathVariable}/fourth"])
+internal fun FourthScreenComposable(
     modifier: Modifier = Modifier,
-    thirdScreenRoute: ThirdScreenRoute
+    fourthScreenRoute: FourthScreenRoute
 ) = Column(
     modifier = modifier.fillMaxSize().padding(16.dp),
     horizontalAlignment = Alignment.CenterHorizontally
@@ -31,8 +31,9 @@ internal fun ThirdScreenComposable(
     val navigation = LocalNavigationController.current
 
     Spacer(modifier = Modifier.weight(1f))
-    Text(text = thirdScreenRoute.title)
-    Text(text = thirdScreenRoute.description)
+    Text(text = "Title: ${fourthScreenRoute.title}")
+    Text(text = "Description: ${fourthScreenRoute.description}")
+    Text(text = "Path Variable: ${fourthScreenRoute.pathVariable}")
     Spacer(modifier = Modifier.weight(1f))
     Row(
         modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
@@ -40,14 +41,7 @@ internal fun ThirdScreenComposable(
     ) {
         Button(
             modifier = Modifier.weight(1f),
-            onClick = {
-                navigation.popUpTo(
-                    direction = SecondScreenRoute(
-                        title = "Second Screen",
-                        description = "Backed using route"
-                    )
-                )
-            },
+            onClick = { navigation.popUpTo(direction = FirstScreenRoute) },
             content = { Text("Back using route") }
         )
         Button(
@@ -55,7 +49,7 @@ internal fun ThirdScreenComposable(
             onClick = {
                 navigation.navigateTo(
                     deeplink = "/first",
-                    strategy = LaunchStrategy.SingleTop(true)
+                    strategy = LaunchStrategy.NewTask(true)
                 )
             },
             content = { Text("Back using Deeplink") }

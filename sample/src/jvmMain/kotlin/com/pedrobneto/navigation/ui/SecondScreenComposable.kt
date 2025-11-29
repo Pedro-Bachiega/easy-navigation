@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pedrobneto.navigation.annotation.NavigationEntry
 import com.pedrobneto.navigation.core.LocalNavigationController
+import com.pedrobneto.navigation.core.launch.LaunchStrategy
 import com.pedrobneto.navigation.model.FirstScreenRoute
 import com.pedrobneto.navigation.model.SecondScreenRoute
 
@@ -43,7 +44,12 @@ internal fun SecondScreenComposable(
         )
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.navigateTo(deeplink = "/first", singleTop = true) },
+            onClick = {
+                navigation.navigateTo(
+                    deeplink = "/first",
+                    strategy = LaunchStrategy.SingleTop(true)
+                )
+            },
             content = { Text("Back using Deeplink") }
         )
     }

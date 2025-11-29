@@ -13,7 +13,6 @@ import com.pedrobneto.navigation.core.launch.LaunchStrategy
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
-import kotlin.reflect.KClass
 
 /**
  * A CompositionLocal that provides access to the [NavigationController] instance.
@@ -94,20 +93,8 @@ class NavigationController private constructor(
      * deeplink is malformed for the target route.
      */
     @Throws(IllegalArgumentException::class)
-    fun navigateTo(deeplink: String, strategy: LaunchStrategy = LaunchStrategy.NewTask()) {
-        val normalizedTargetDeeplink = deeplink.normalized
-        val direction = directions.firstOrNull { direction ->
-            direction.deeplinks.any { it.normalized == normalizedTargetDeeplink }
-        } ?: throw IllegalArgumentException("No direction found for deeplink: $deeplink")
-
-        val route = deeplink.queryParamsAsRoute(direction.routeClass)
-            ?: throw IllegalArgumentException(
-                "Invalid deeplink for route: ${direction.routeClass.qualifiedName}." +
-                        " Deeplink: $deeplink"
-            )
-
-        navigateTo(route = route, strategy = strategy)
-    }
+    fun navigateTo(deeplink: String, strategy: LaunchStrategy = LaunchStrategy.NewTask()) =
+        navigateTo(route = deeplink.toRoute(), strategy = strategy)
 
     /**
      * Navigates to a destination via a deeplink URI.
@@ -170,20 +157,58 @@ class NavigationController private constructor(
         false
     }
 
-    @OptIn(InternalSerializationApi::class)
-    private fun String.queryParamsAsRoute(routeClass: KClass<out NavigationRoute>): NavigationRoute? {
-        val map = if (matches(Regex("^[^?]+\\?[^=]+=.+$"))) {
-            split("?").last().split("&").associate {
-                val (key, value) = it.split("=")
-                key to value
+    private fun findDirectionForDeeplink(deeplink: String): Pair<String, NavigationDirection>? {
+        val normalizedTargetDeeplink = deeplink.normalized
+        directions.forEach { direction ->
+            direction.deeplinks.forEach {
+                val normalized = it.normalized
+                val matched = normalized == normalizedTargetDeeplink ||
+                        normalized.replace("\\{[^}]+\\}".toRegex(), "[^/]+")
+                            .toRegex()
+                            .matches(normalizedTargetDeeplink)
+                if (matched) return it to direction
             }
-        } else {
-            emptyMap()
         }
 
-        return Json.runCatching {
-            decodeFromString(routeClass.serializer(), encodeToString(map))
+        return null
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun String.toRoute(): NavigationRoute {
+        val (directionDeeplink, direction) = findDirectionForDeeplink(this)
+            ?: throw IllegalArgumentException("No direction found for deeplink: $this")
+
+        val parametersMap = mutableMapOf<String, String>()
+
+        val pathValues = split("/")
+        val pathLabels = directionDeeplink.split("/")
+
+        pathLabels.forEachIndexed { index, label ->
+            if (label.startsWith("{") && label.endsWith("}")) {
+                val key = label.removePrefix("{").removeSuffix("}")
+                pathValues.getOrNull(index)?.let { parametersMap[key] = it }
+            }
+        }
+
+        if (matches(Regex("^[^?]+\\?[^=]+=.+$"))) {
+            split("?").last()
+                .split("&")
+                .forEach {
+                    val (key, value) = it.split("=")
+                    parametersMap[key] = value
+                }
+        }
+
+        val deserialized = Json.runCatching {
+            decodeFromString(
+                direction.routeClass.serializer(),
+                encodeToString(parametersMap)
+            )
         }.getOrNull()
+
+        return deserialized ?: throw IllegalArgumentException(
+            "Invalid deeplink for route: ${direction.routeClass.qualifiedName}. Deeplink: $this"
+        )
     }
 
     companion object {
