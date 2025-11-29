@@ -19,6 +19,8 @@ kotlin {
             implementation(libs.jetbrains.compose.navigation3.ui)
 
             implementation(libs.jetbrains.serialization)
+
+            implementation(libs.toolkit.arch.lumber)
         }
     }
 }
