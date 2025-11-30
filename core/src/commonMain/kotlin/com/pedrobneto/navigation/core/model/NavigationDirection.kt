@@ -1,4 +1,4 @@
-package com.pedrobneto.navigation.core
+package com.pedrobneto.navigation.core.model
 
 import androidx.compose.runtime.Composable
 import kotlin.reflect.KClass
@@ -13,7 +13,7 @@ import kotlin.reflect.KClass
  */
 abstract class NavigationDirection(
     val routeClass: KClass<out NavigationRoute>,
-    val deeplinks: List<String>
+    val deeplinks: List<NavigationDeeplink>
 ) {
     /**
      * Draws the composable content for the given [route].

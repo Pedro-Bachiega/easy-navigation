@@ -42,7 +42,7 @@ internal fun ThirdScreenComposable(
             modifier = Modifier.weight(1f),
             onClick = {
                 navigation.popUpTo(
-                    direction = SecondScreenRoute(
+                    route = SecondScreenRoute(
                         title = "Second Screen",
                         description = "Backed using route"
                     )

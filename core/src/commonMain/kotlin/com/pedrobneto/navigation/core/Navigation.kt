@@ -17,6 +17,8 @@ import androidx.navigation3.ui.defaultPopTransitionSpec
 import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
 import androidx.navigation3.ui.defaultTransitionSpec
 import androidx.navigationevent.NavigationEvent
+import com.pedrobneto.navigation.core.model.DirectionRegistry
+import com.pedrobneto.navigation.core.model.NavigationRoute
 
 /**
  * A composable that provides a navigation controller and displays the current navigation entry.

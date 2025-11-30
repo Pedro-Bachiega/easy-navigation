@@ -9,7 +9,7 @@ internal fun CodeGenerator.createModuleRegistryFile(
     directions: List<String>,
 ) {
     val imports = listOf(
-        "com.pedrobneto.navigation.core.DirectionRegistry",
+        "com.pedrobneto.navigation.core.model.DirectionRegistry",
     ) + directions
 
     val template = """

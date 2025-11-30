@@ -1,7 +1,7 @@
 package com.pedrobneto.navigation.core.launch
 
 import com.pedrobneto.navigation.core.NavigationController
-import com.pedrobneto.navigation.core.NavigationRoute
+import com.pedrobneto.navigation.core.model.NavigationRoute
 
 /**
  * Defines how a navigation destination should be launched, affecting the back stack.

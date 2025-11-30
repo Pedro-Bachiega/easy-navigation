@@ -45,7 +45,7 @@ internal fun FirstScreenComposable(modifier: Modifier = Modifier) = Column(
         )
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.navigateTo("/Some cool value/fourth?title=Fourth screen title&description=Fourth screen description") },
+            onClick = { navigation.navigateTo("/fourth/Some cool value?title=Fourth screen title&description=Fourth screen description") },
             content = { Text("Fourth screen using Deeplink") }
         )
     }

@@ -1,4 +1,6 @@
-package com.pedrobneto.navigation.core
+package com.pedrobneto.navigation.core.model
+
+import com.pedrobneto.navigation.core.model.NavigationDirection
 
 /**
  * A registry of navigation directions.

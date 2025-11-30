@@ -39,7 +39,7 @@ internal fun SecondScreenComposable(
     ) {
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.popUpTo(direction = FirstScreenRoute) },
+            onClick = { navigation.popUpTo(route = FirstScreenRoute) },
             content = { Text("Back using route") }
         )
         Button(

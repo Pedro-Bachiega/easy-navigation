@@ -20,7 +20,7 @@ import com.pedrobneto.navigation.model.FirstScreenRoute
 import com.pedrobneto.navigation.model.FourthScreenRoute
 
 @Composable
-@NavigationEntry(route = FourthScreenRoute::class, deeplinks = ["/{pathVariable}/fourth"])
+@NavigationEntry(route = FourthScreenRoute::class, deeplinks = ["/fourth/{pathVariable}"])
 internal fun FourthScreenComposable(
     modifier: Modifier = Modifier,
     fourthScreenRoute: FourthScreenRoute
@@ -41,7 +41,7 @@ internal fun FourthScreenComposable(
     ) {
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.popUpTo(direction = FirstScreenRoute) },
+            onClick = { navigation.popUpTo(route = FirstScreenRoute) },
             content = { Text("Back using route") }
         )
         Button(

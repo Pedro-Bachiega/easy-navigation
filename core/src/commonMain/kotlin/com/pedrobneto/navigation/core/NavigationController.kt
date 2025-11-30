@@ -10,9 +10,12 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
 import br.com.arch.toolkit.lumber.Lumber
 import com.pedrobneto.navigation.core.launch.LaunchStrategy
-import kotlinx.serialization.InternalSerializationApi
+import com.pedrobneto.navigation.core.model.DirectionRegistry
+import com.pedrobneto.navigation.core.model.NavigationDeeplink
+import com.pedrobneto.navigation.core.model.NavigationDirection
+import com.pedrobneto.navigation.core.model.NavigationRoute
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
+import kotlin.reflect.KClass
 
 /**
  * A CompositionLocal that provides access to the [NavigationController] instance.
@@ -32,23 +35,15 @@ val LocalNavigationController: ProvidableCompositionLocal<NavigationController> 
  *
  * @property backStack A reactive list of [NavigationRoute]s representing the current navigation back stack.
  * @param directionRegistryList A list of [DirectionRegistry] instances that contain all possible navigation directions.
+ * @param json The [Json] instance used for deserializing route arguments.
  */
 class NavigationController private constructor(
     val backStack: SnapshotStateList<NavigationRoute>,
     private val directionRegistryList: List<DirectionRegistry>,
+    private val json: Json
 ) {
     private val directions: List<NavigationDirection> =
         directionRegistryList.flatMap(DirectionRegistry::directions)
-
-    private val String.normalized: String
-        get() = when {
-            startsWith("/") -> "nav:/$this"
-            matches(".*://.*".toRegex()) -> this
-            else -> error("Malformed deeplink '$this'. Must follow uri pattern.")
-        }.withoutScheme.withoutQueryParams
-
-    private val String.withoutScheme: String get() = split("://").last()
-    private val String.withoutQueryParams: String get() = split("?").first()
 
     /**
      * Provides a [NavEntry] for a given [NavigationRoute], allowing the navigation framework
@@ -64,9 +59,23 @@ class NavigationController private constructor(
     /**
      * Pops the top-most destination from the back stack.
      *
-     * @return `true` if a destination was popped, `false` if the back stack was empty.
+     * @throws IllegalStateException if `at the root of the back stack.
      */
-    fun navigateUp() = backStack.removeLastOrNull() != null
+    fun navigateUp() {
+        if (backStack.size == 1) {
+            // TODO Close navigation when root popped
+            throw IllegalStateException("Cannot pop root destination")
+        }
+
+        backStack.removeAt(backStack.lastIndex)
+    }
+
+    /**
+     * Pops the top-most destination from the back stack.
+     *
+     * @throws IllegalStateException if `at the root of the back stack.
+     */
+    fun safeNavigateUp(): Boolean = runCatching { navigateUp() }.isSuccess
 
     /**
      * Navigates to a given [NavigationRoute].
@@ -94,7 +103,10 @@ class NavigationController private constructor(
      */
     @Throws(IllegalArgumentException::class)
     fun navigateTo(deeplink: String, strategy: LaunchStrategy = LaunchStrategy.NewTask()) =
-        navigateTo(route = deeplink.toRoute(), strategy = strategy)
+        navigateTo(
+            route = NavigationDeeplink(deeplink).resolve(json, directions),
+            strategy = strategy
+        )
 
     /**
      * Navigates to a destination via a deeplink URI.
@@ -109,35 +121,36 @@ class NavigationController private constructor(
     fun safeNavigateTo(
         deeplink: String,
         strategy: LaunchStrategy = LaunchStrategy.NewTask()
-    ): Boolean = runCatching {
-        navigateTo(deeplink, strategy)
-        true
-    }.getOrElse {
-        Lumber.tag("NavigationController").error(it)
-        false
+    ): Boolean = runCatching { navigateTo(deeplink, strategy) }.isSuccess
+
+    /**
+     * Pops the back stack up to a given destination route.
+     *
+     * This will remove all destinations from the top of the stack down to the specified [route].
+     *
+     * @param route The destination [NavigationRoute] to pop up to.
+     * @param inclusive If `true`, the destination itself will also be popped from the stack.
+     * @throws IllegalStateException if `inclusive` is true and the target `direction` is the root of the back stack.
+     */
+    @Throws(IllegalStateException::class)
+    fun popUpTo(route: NavigationRoute, inclusive: Boolean = false) {
+        if (route !in backStack) return
+        popUpTo(backStack.indexOfLast { it == route }, inclusive)
     }
 
     /**
      * Pops the back stack up to a given destination route.
      *
-     * This will remove all destinations from the top of the stack down to the specified [direction].
+     * This will remove all destinations from the top of the stack down to the specified [routeClass].
      *
-     * @param direction The destination [NavigationRoute] to pop up to.
+     * @param routeClass The destination [NavigationRoute] to pop up to.
      * @param inclusive If `true`, the destination itself will also be popped from the stack.
      * @throws IllegalStateException if `inclusive` is true and the target `direction` is the root of the back stack.
      */
     @Throws(IllegalStateException::class)
-    fun popUpTo(direction: NavigationRoute, inclusive: Boolean = false) {
-        if (direction !in backStack) return
-
-        val directionIndex = backStack.indexOfLast { it::class == direction::class }
-        if (directionIndex == 0 && inclusive) {
-            // TODO Handle 2 backStacks and stop displaying navigation when root popped
-            throw IllegalStateException("Cannot pop root destination")
-        }
-
-        val startIndex = if (inclusive) directionIndex else directionIndex + 1
-        runCatching { backStack.removeRange(startIndex, backStack.size) }
+    fun popUpTo(routeClass: KClass<out NavigationRoute>, inclusive: Boolean = false) {
+        if (backStack.none { it::class == routeClass }) return
+        popUpTo(backStack.indexOfLast { it::class == routeClass }, inclusive)
     }
 
     /**
@@ -149,66 +162,19 @@ class NavigationController private constructor(
      * @param inclusive If `true`, the destination itself will also be popped from the stack.
      * @return `true` if the pop operation was successful, `false` otherwise.
      */
-    fun safePopUpTo(direction: NavigationRoute, inclusive: Boolean = false): Boolean = runCatching {
-        popUpTo(direction, inclusive)
-        true
-    }.getOrElse {
-        Lumber.tag("NavigationController").error(it)
-        false
-    }
+    fun safePopUpTo(direction: NavigationRoute, inclusive: Boolean = false): Boolean =
+        runCatching { popUpTo(direction, inclusive) }.isSuccess
 
-    private fun findDirectionForDeeplink(deeplink: String): Pair<String, NavigationDirection>? {
-        val normalizedTargetDeeplink = deeplink.normalized
-        directions.forEach { direction ->
-            direction.deeplinks.forEach {
-                val normalized = it.normalized
-                val matched = normalized == normalizedTargetDeeplink ||
-                        normalized.replace("\\{[^}]+\\}".toRegex(), "[^/]+")
-                            .toRegex()
-                            .matches(normalizedTargetDeeplink)
-                if (matched) return it to direction
-            }
+    @Throws(IllegalStateException::class)
+    private fun popUpTo(index: Int, inclusive: Boolean = false) {
+        if (index == 0 && inclusive) {
+            // TODO Close navigation when root popped
+            Lumber.tag("NavigationController").error("Cannot pop root destination.")
+            throw IllegalStateException("Cannot pop root destination.")
         }
 
-        return null
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    private fun String.toRoute(): NavigationRoute {
-        val (directionDeeplink, direction) = findDirectionForDeeplink(this)
-            ?: throw IllegalArgumentException("No direction found for deeplink: $this")
-
-        val parametersMap = mutableMapOf<String, String>()
-
-        val pathValues = split("/")
-        val pathLabels = directionDeeplink.split("/")
-
-        pathLabels.forEachIndexed { index, label ->
-            if (label.startsWith("{") && label.endsWith("}")) {
-                val key = label.removePrefix("{").removeSuffix("}")
-                pathValues.getOrNull(index)?.let { parametersMap[key] = it }
-            }
-        }
-
-        if (matches(Regex("^[^?]+\\?[^=]+=.+$"))) {
-            split("?").last()
-                .split("&")
-                .forEach {
-                    val (key, value) = it.split("=")
-                    parametersMap[key] = value
-                }
-        }
-
-        val deserialized = Json.runCatching {
-            decodeFromString(
-                direction.routeClass.serializer(),
-                encodeToString(parametersMap)
-            )
-        }.getOrNull()
-
-        return deserialized ?: throw IllegalArgumentException(
-            "Invalid deeplink for route: ${direction.routeClass.qualifiedName}. Deeplink: $this"
-        )
+        val startIndex = if (inclusive) index else index + 1
+        backStack.removeRange(startIndex, backStack.size)
     }
 
     companion object {
@@ -219,6 +185,7 @@ class NavigationController private constructor(
          * @param directionRegistries A list of [DirectionRegistry] instances containing all possible navigation directions.
          * @param backStack An optional [SnapshotStateList] to be used as the back stack. If not provided,
          * a new one will be created with the [initialRoute].
+         * @param json The [Json] instance used for deserializing route arguments.
          * @return A remembered [NavigationController] instance.
          */
         @Composable
@@ -228,6 +195,15 @@ class NavigationController private constructor(
             backStack: SnapshotStateList<NavigationRoute> = remember {
                 mutableStateListOf(initialRoute)
             },
-        ) = NavigationController(backStack = backStack, directionRegistryList = directionRegistries)
+            json: Json = Json {
+                ignoreUnknownKeys = true
+                encodeDefaults = true
+                prettyPrint = true
+            }
+        ) = NavigationController(
+            backStack = backStack,
+            directionRegistryList = directionRegistries,
+            json = json
+        )
     }
 }

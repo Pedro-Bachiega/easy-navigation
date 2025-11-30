@@ -16,15 +16,16 @@ internal fun CodeGenerator.createDirectionFile(
 
     val imports = listOf(
         "androidx.compose.runtime.Composable",
-        "com.pedrobneto.navigation.core.NavigationDirection",
-        "com.pedrobneto.navigation.core.NavigationRoute",
+        "com.pedrobneto.navigation.core.model.NavigationDeeplink",
+        "com.pedrobneto.navigation.core.model.NavigationDirection",
+        "com.pedrobneto.navigation.core.model.NavigationRoute",
         "$functionPackageName.$functionName"
     ).sorted()
 
     val deeplinksFormatted = if (deeplinks.isEmpty()) {
-        "emptyList<String>()"
+        "emptyList<NavigationDeeplink>()"
     } else {
-        "listOf(\n\t\t${deeplinks.joinToString(",\n\t\t") { "\"$it\"" }}\n\t)"
+        "listOf(\n\t\t${deeplinks.joinToString(",\n\t\t") { "NavigationDeeplink(\"$it\")" }}\n\t)"
     }
 
     val template = """

@@ -1,4 +1,4 @@
-package com.pedrobneto.navigation.core
+package com.pedrobneto.navigation.core.model
 
 /**
  * Represents a route in the navigation graph.
