@@ -37,7 +37,7 @@ val LocalNavigationController: ProvidableCompositionLocal<NavigationController> 
  * @param directionRegistryList A list of [DirectionRegistry] instances that contain all possible navigation directions.
  * @param json The [Json] instance used for deserializing route arguments.
  */
-class NavigationController private constructor(
+class NavigationController internal constructor(
     val backStack: SnapshotStateList<NavigationRoute>,
     private val directionRegistryList: List<DirectionRegistry>,
     private val json: Json

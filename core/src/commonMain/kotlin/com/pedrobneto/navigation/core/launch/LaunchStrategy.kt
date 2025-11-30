@@ -58,7 +58,7 @@ sealed class LaunchStrategy {
     class NewTask(val clearTask: Boolean = false) : LaunchStrategy() {
         override fun handleNavigation(route: NavigationRoute, controller: NavigationController) {
             controller.backStack.add(route)
-            if (clearTask) controller.backStack.removeRange(0, controller.backStack.lastIndex - 1)
+            if (clearTask) controller.backStack.removeRange(0, controller.backStack.lastIndex)
         }
     }
 }

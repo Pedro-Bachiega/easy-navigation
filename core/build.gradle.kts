@@ -22,5 +22,9 @@ kotlin {
 
             implementation(libs.toolkit.arch.lumber)
         }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }

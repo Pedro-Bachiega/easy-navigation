@@ -32,8 +32,10 @@ import kotlin.reflect.KClass
 @Serializable
 value class NavigationDeeplink(val raw: String) {
 
+    private val regex: Regex get() = Regex("(((?<scheme>.+):/)*)/(?<host>[^/?]+)((?<path>/[^?]+)*)((\\?(?<queryParams>.+))*)")
+
     private val groups: MatchGroupCollection
-        get() = Regex("(((?<scheme>.+):/)*)/(?<host>[^/]+)((?<path>/[^?]+)*)((\\?(?<queryParams>.+))*)")
+        get() = regex
             .find(raw)
             ?.groups
             ?: error(
@@ -68,6 +70,10 @@ value class NavigationDeeplink(val raw: String) {
     /** The "clean" version of the deeplink, stripped of its scheme and query parameters. */
     val clean: String
         get() = raw.split(":/").last().split("?").first()
+
+    init {
+        if (!raw.matches(regex)) throw IllegalArgumentException("Malformed deeplink '$raw'")
+    }
 
     /**
      * Resolves the deeplink to a [NavigationRoute].
