@@ -73,7 +73,7 @@ class NavigationController private constructor(
     /**
      * Pops the top-most destination from the back stack.
      *
-     * @throws IllegalStateException if `at the root of the back stack.
+     * @return `true` if the navigation was successful, `false` otherwise.
      */
     fun safeNavigateUp(): Boolean = runCatching { navigateUp() }.isSuccess
 
