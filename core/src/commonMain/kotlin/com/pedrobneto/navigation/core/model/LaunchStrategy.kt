@@ -1,7 +1,6 @@
-package com.pedrobneto.navigation.core.launch
+package com.pedrobneto.navigation.core.model
 
 import com.pedrobneto.navigation.core.NavigationController
-import com.pedrobneto.navigation.core.model.NavigationRoute
 
 /**
  * Defines how a navigation destination should be launched, affecting the back stack.
@@ -51,14 +50,14 @@ sealed class LaunchStrategy {
     /**
      * A launch strategy that can clear the back stack before launching the new destination.
      *
-     * @property clearTask If `true`, the entire back stack is cleared and the new destination becomes the new root.
+     * @property clearStack If `true`, the entire back stack is cleared and the new destination becomes the new root.
      * This is useful for flows that should not allow returning to the previous flow, such as after a login or logout.
      * If `false`, a new destination is simply pushed on top of the current back stack.
      */
-    class NewTask(val clearTask: Boolean = false) : LaunchStrategy() {
+    class NewTask(val clearStack: Boolean = false) : LaunchStrategy() {
         override fun handleNavigation(route: NavigationRoute, controller: NavigationController) {
             controller.backStack.add(route)
-            if (clearTask) controller.backStack.removeRange(0, controller.backStack.lastIndex)
+            if (clearStack) controller.backStack.removeRange(0, controller.backStack.lastIndex)
         }
     }
 }

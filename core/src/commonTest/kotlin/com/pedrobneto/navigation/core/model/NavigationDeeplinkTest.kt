@@ -8,34 +8,28 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
-@Serializable
-data object TestHomeRoute : NavigationRoute
-
-@Serializable
-data class TestDetailsRoute(val id: Long, val source: String = "default") : NavigationRoute
-
-@Serializable
-data class TestUserRoute(val userId: String) : NavigationRoute
-
 class NavigationDeeplinkTest {
 
     private val testDirections = listOf(
-        object : NavigationDirection(TestHomeRoute::class, listOf(NavigationDeeplink("/home"))) {
-            @Composable
-            override fun Draw(route: NavigationRoute) {
-            }
-        },
         object : NavigationDirection(
-            TestDetailsRoute::class,
-            listOf(NavigationDeeplink("/details/{id}"))
+            deeplinks = listOf(NavigationDeeplink("/home")),
+            routeClass = TestHomeRoute::class
         ) {
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
         },
         object : NavigationDirection(
-            TestUserRoute::class,
-            listOf(NavigationDeeplink("app://user/{userId}"))
+            deeplinks = listOf(NavigationDeeplink("/details/{id}")),
+            routeClass = TestDetailsRoute::class,
+        ) {
+            @Composable
+            override fun Draw(route: NavigationRoute) {
+            }
+        },
+        object : NavigationDirection(
+            deeplinks = listOf(NavigationDeeplink("app://user/{userId}")),
+            routeClass = TestUserRoute::class,
         ) {
             @Composable
             override fun Draw(route: NavigationRoute) {
@@ -67,7 +61,7 @@ class NavigationDeeplinkTest {
         assertNull(deeplink.scheme)
         assertEquals("home", deeplink.host)
         assertNull(deeplink.path)
-        assertEquals(emptyMap<String, String>(), deeplink.queryParams)
+        assertEquals(emptyMap(), deeplink.queryParams)
         assertEquals("/home", deeplink.clean)
     }
 
@@ -149,4 +143,13 @@ class NavigationDeeplinkTest {
         }
     }
     // endregion
+
+    @Serializable
+    data object TestHomeRoute : NavigationRoute
+
+    @Serializable
+    data class TestDetailsRoute(val id: Long, val source: String = "default") : NavigationRoute
+
+    @Serializable
+    data class TestUserRoute(val userId: String) : NavigationRoute
 }

@@ -115,8 +115,8 @@ It performs three key tasks:
 
 The `LaunchStrategy` sealed class controls how `navigateTo` operations affect the back stack, similar to Android's launch modes.
 
-- `LaunchStrategy.NewTask(clearTask: Boolean)`:
-  - If `clearTask` is `true`, the entire back stack is cleared, and the new destination becomes the root. Ideal for post-login or other "reset" flows.
+- `LaunchStrategy.NewTask(clearStack: Boolean)`:
+  - If `clearStack` is `true`, the entire back stack is cleared, and the new destination becomes the root. Ideal for post-login or other "reset" flows.
   - If `false` (default), the new destination is pushed onto the stack.
 
 - `LaunchStrategy.SingleTop(clearTop: Boolean)`:
@@ -309,7 +309,7 @@ navigation.navigateTo(DetailsRoute(id = "123", title = "Example"))
 // Clear the stack and make DetailsRoute the new root
 navigation.navigateTo(
     route = DetailsRoute(id = "123"),
-    strategy = LaunchStrategy.NewTask(clearTask = true)
+    strategy = LaunchStrategy.NewTask(clearStack = true)
 )
 ```
 

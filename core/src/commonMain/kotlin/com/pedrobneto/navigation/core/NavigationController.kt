@@ -1,3 +1,5 @@
+@file:OptIn(InternalSerializationApi::class)
+
 package com.pedrobneto.navigation.core
 
 import androidx.compose.runtime.Composable
@@ -9,12 +11,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
 import br.com.arch.toolkit.lumber.Lumber
-import com.pedrobneto.navigation.core.launch.LaunchStrategy
 import com.pedrobneto.navigation.core.model.DirectionRegistry
+import com.pedrobneto.navigation.core.model.LaunchStrategy
 import com.pedrobneto.navigation.core.model.NavigationDeeplink
 import com.pedrobneto.navigation.core.model.NavigationDirection
 import com.pedrobneto.navigation.core.model.NavigationRoute
+import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 import kotlin.reflect.KClass
 
 /**
@@ -40,10 +44,14 @@ val LocalNavigationController: ProvidableCompositionLocal<NavigationController> 
 class NavigationController internal constructor(
     val backStack: SnapshotStateList<NavigationRoute>,
     private val directionRegistryList: List<DirectionRegistry>,
-    private val json: Json
+    private val json: Json,
 ) {
     private val directions: List<NavigationDirection> =
         directionRegistryList.flatMap(DirectionRegistry::directions)
+
+    private val currentDirection: NavigationDirection
+        get() = directions.find { it.routeClass == currentRoute::class }
+            ?: error("No direction found for route $currentRoute")
 
     /**
      * Provides a [NavEntry] for a given [NavigationRoute], allowing the navigation framework
@@ -57,18 +65,21 @@ class NavigationController internal constructor(
         }
 
     /**
+     * The current route in the navigation back stack.
+     *
+     * This is the last element in the [backStack] list.
+     */
+    val currentRoute: NavigationRoute get() = backStack.last()
+
+    /**
      * Pops the top-most destination from the back stack.
      *
-     * @throws IllegalStateException if `at the root of the back stack.
+     * If the back stack has 1 route and the route has a parent, it will navigate to the parent route.
+     *
+     * @throws [IllegalArgumentException] if the parent route does not have a constructor with 0 parameters or a constructor where all parameters have default values.
+     * @throws [IllegalStateException] if at the root of the back stack and there is no parent route.
      */
-    fun navigateUp() {
-        if (backStack.size == 1) {
-            // TODO Close navigation when root popped
-            throw IllegalStateException("Cannot pop root destination")
-        }
-
-        backStack.removeAt(backStack.lastIndex)
-    }
+    fun navigateUp() = popUpTo(targetRouteIndex = backStack.lastIndex - 1)
 
     /**
      * Pops the top-most destination from the back stack.
@@ -124,32 +135,44 @@ class NavigationController internal constructor(
     ): Boolean = runCatching { navigateTo(deeplink, strategy) }.isSuccess
 
     /**
-     * Pops the back stack up to a given destination route.
+     * Pops the back stack up to a given `route` [NavigationRoute].
      *
-     * This will remove all destinations from the top of the stack down to the specified [route].
+     * This will remove all routes from the top of the stack down to the specified [route].
      *
-     * @param route The destination [NavigationRoute] to pop up to.
-     * @param inclusive If `true`, the destination itself will also be popped from the stack.
-     * @throws IllegalStateException if `inclusive` is true and the target `direction` is the root of the back stack.
+     * @param route The `route` [NavigationRoute] to pop up to.
+     * @param inclusive If `true`, the `route` itself will also be popped from the stack.
+     * @throws IllegalArgumentException if the target `route` is not found in the back stack.
+     * @throws IllegalStateException if `inclusive` is true, the target `route` is the root of the back stack
+     * and there is no parent route provided for that `route`. If a parent `route` is provided for that `route`,
+     * it will be used as a destination to navigate to instead of throwing an exception.
      */
     @Throws(IllegalStateException::class)
     fun popUpTo(route: NavigationRoute, inclusive: Boolean = false) {
-        if (route !in backStack) return
+        if (route !in backStack) {
+            Lumber.tag("NavigationController").error("No route found in back stack for $route")
+            throw IllegalArgumentException("No route found in back stack for $route")
+        }
         popUpTo(backStack.indexOfLast { it == route }, inclusive)
     }
 
     /**
-     * Pops the back stack up to a given destination route.
+     * Pops the back stack up to a given `route` [NavigationRoute].
      *
-     * This will remove all destinations from the top of the stack down to the specified [routeClass].
+     * This will remove all routes from the top of the stack down to the specified [routeClass].
      *
-     * @param routeClass The destination [NavigationRoute] to pop up to.
-     * @param inclusive If `true`, the destination itself will also be popped from the stack.
-     * @throws IllegalStateException if `inclusive` is true and the target `direction` is the root of the back stack.
+     * @param routeClass The `route` [NavigationRoute] to pop up to.
+     * @param inclusive If `true`, the `route` itself will also be popped from the stack.
+     * @throws IllegalArgumentException if the target `route` is not found in the back stack.
+     * @throws IllegalStateException if `inclusive` is true, the target `route` is the root of the back stack
+     * and there is no parent route provided for that `route`. If a parent `route` is provided for that `route`,
+     * it will be used as a destination to navigate to instead of throwing an exception.
      */
-    @Throws(IllegalStateException::class)
+    @Throws(IllegalArgumentException::class, IllegalStateException::class)
     fun popUpTo(routeClass: KClass<out NavigationRoute>, inclusive: Boolean = false) {
-        if (backStack.none { it::class == routeClass }) return
+        if (backStack.none { it::class == routeClass }) {
+            Lumber.tag("NavigationController").error("No route found in back stack for $routeClass")
+            throw IllegalArgumentException("No route found in back stack for $routeClass")
+        }
         popUpTo(backStack.indexOfLast { it::class == routeClass }, inclusive)
     }
 
@@ -166,15 +189,43 @@ class NavigationController internal constructor(
         runCatching { popUpTo(direction, inclusive) }.isSuccess
 
     @Throws(IllegalStateException::class)
-    private fun popUpTo(index: Int, inclusive: Boolean = false) {
-        if (index == 0 && inclusive) {
-            // TODO Close navigation when root popped
-            Lumber.tag("NavigationController").error("Cannot pop root destination.")
-            throw IllegalStateException("Cannot pop root destination.")
-        }
+    private fun popUpTo(targetRouteIndex: Int, inclusive: Boolean = false) {
+        val parentRouteClass = currentDirection.parentRouteClass
 
-        val startIndex = if (inclusive) index else index + 1
-        backStack.removeRange(startIndex, backStack.size)
+        val actualFirstRemovedIndex = if (inclusive) targetRouteIndex else targetRouteIndex + 1
+        val isPoppingRoot = actualFirstRemovedIndex <= 0
+        val shouldClose = isPoppingRoot && parentRouteClass == null
+        val shouldTryNavigatingToParent = isPoppingRoot && parentRouteClass != null
+
+        when {
+            shouldClose -> {
+                // TODO Close navigation when root popped
+                Lumber.tag("NavigationController").error("Cannot pop root destination.")
+                throw IllegalStateException("Cannot pop root destination.")
+            }
+
+            shouldTryNavigatingToParent -> {
+                runCatching {
+                    val route = json.decodeFromString(parentRouteClass.serializer(), "{}")
+                    navigateTo(route = route, strategy = LaunchStrategy.NewTask(clearStack = true))
+                }.getOrElse { exception ->
+                    Lumber.tag("NavigationController")
+                        .error(
+                            exception,
+                            "Parent route should either have a constructor with 0 parameters or all parameters should have default values."
+                        )
+                    throw IllegalArgumentException(
+                        "Parent route should either have a constructor with 0 parameters or all parameters should have default values.",
+                        exception
+                    )
+                }
+            }
+
+            else -> {
+                val startIndex = if (inclusive) targetRouteIndex else targetRouteIndex + 1
+                backStack.removeRange(startIndex, backStack.size)
+            }
+        }
     }
 
     companion object {
