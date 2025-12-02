@@ -23,7 +23,6 @@ kotlin {
 
             implementation(libs.jetbrains.serialization)
 
-            implementation(project(":annotation"))
             implementation(project(":core"))
         }
     }

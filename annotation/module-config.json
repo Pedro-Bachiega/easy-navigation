@@ -1,8 +1,0 @@
-{
-  "targets": [
-    "ANDROID",
-    "IOS_ARM64",
-    "JVM",
-    "JS"
-  ]
-}

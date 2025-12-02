@@ -9,8 +9,10 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
-import com.pedrobneto.navigation.annotation.NavigationEntry
+import com.pedrobneto.navigation.core.annotation.NavigationEntry
+import com.pedrobneto.navigation.core.model.NavigationRoute
 import java.util.Locale
+import kotlin.reflect.KClass
 
 internal class LibraryProcessor(private val environment: SymbolProcessorEnvironment) :
     SymbolProcessor {
@@ -28,66 +30,75 @@ internal class LibraryProcessor(private val environment: SymbolProcessorEnvironm
         if (invoked) return emptyList()
         invoked = true
 
-        val directionList = resolver
+        val isMultiplatformWithSingleTarget =
+            environment.options["isMultiplatformWithSingleTarget"]?.toBooleanStrictOrNull() == true
+        val moduleName = resolver.getModuleName().getShortName()
+        val commonMainModuleName = "commonMain"
+
+        val symbolList = resolver
             .getSymbolsWithAnnotation(
                 annotationName = NavigationEntry::class.qualifiedName!!,
             )
             .filterIsInstance<KSFunctionDeclaration>()
             .toList()
-            .mapNotNull { function ->
-                val annotation = function.getAnnotationsByType(NavigationEntry::class)
-                    .firstOrNull()
-                    ?: return@mapNotNull null
 
-                val routeQualifiedName = runCatching { annotation.route.qualifiedName }
-                    .getOrElse { exception ->
-                        Regex("(.*ClassNotFoundException: )([a-zA-Z._]+)")
-                            .find(exception.message.orEmpty())
-                            ?.groupValues
-                            ?.last()
-                            ?: run {
-                                Lumber.tag("LibraryProcessor").error(
-                                    exception,
-                                    "Route not found for function ${function.simpleName.asString()}"
-                                )
-                                return@mapNotNull null
-                            }
-                    } ?: return@mapNotNull null
+        val directionList = symbolList.mapNotNull { function ->
+            val ksFile = function.containingFile ?: return@mapNotNull null
+            val fileInCommonMainPath = ksFile.filePath.contains(commonMainModuleName)
+            val moduleNameContainsCommonMain = moduleName.contains(commonMainModuleName)
+            val isNotInCommonMain = (moduleNameContainsCommonMain && !fileInCommonMainPath) ||
+                    (!moduleNameContainsCommonMain && fileInCommonMainPath)
 
+            val shouldSkip = !isMultiplatformWithSingleTarget && isNotInCommonMain
+            if (shouldSkip) return@mapNotNull null
 
-                val deeplinks = runCatching { annotation.deeplinks }.getOrDefault(emptyArray())
+            val annotation = function.getAnnotationsByType(NavigationEntry::class)
+                .firstOrNull()
+                ?: return@mapNotNull null
 
-                val routePackageName = routeQualifiedName.substringBeforeLast('.')
-                val routeClassName = routeQualifiedName.substringAfterLast('.')
-                val directionClassName = "${routeClassName}Direction"
+            val routeQualifiedName =
+                annotation.qualifiedNameForRoute(NavigationEntry::route) ?: run {
+                    Lumber.tag("LibraryProcessor")
+                        .error("Route not found for function ${function.simpleName.asString()}")
+                    return@mapNotNull null
+                }
 
-                val routeParameterName = function.parameters.firstOrNull {
-                    it.type.resolve().declaration.qualifiedName?.asString() == routeQualifiedName
-                }?.name?.asString()
+            val parentRouteQualifiedName =
+                annotation.qualifiedNameForRoute(NavigationEntry::parentRoute)
 
-                environment.codeGenerator.createDirectionFile(
-                    deeplinks = deeplinks,
-                    directionClassName = directionClassName,
-                    routePackageName = routePackageName,
-                    routeClassName = routeClassName,
-                    functionPackageName = function.packageName.asString(),
-                    functionName = function.simpleName.asString(),
-                    routeParameterName = routeParameterName,
-                )
-            }
+            val deeplinks = runCatching { annotation.deeplinks }.getOrDefault(emptyArray())
 
-        val moduleName = resolver.getModuleName().asString()
-        val fileName = "${normalizeModuleName(moduleName)}DirectionRegistry".trim()
+            val routePackageName = routeQualifiedName.substringBeforeLast('.')
+            val routeClassName = routeQualifiedName.substringAfterLast('.')
+            val directionClassName = "${routeClassName}Direction"
 
-        if (directionList.isEmpty()) {
-            Lumber.tag("LibraryProcessor").debug("No annotations found for module $moduleName")
+            val parentRoutePackageName = parentRouteQualifiedName?.substringBeforeLast('.')
+            val parentRouteClassName = parentRouteQualifiedName?.substringAfterLast('.')
+
+            val routeParameterName = function.parameters.firstOrNull {
+                it.type.resolve().declaration.qualifiedName?.asString() == routeQualifiedName
+            }?.name?.asString()
+
+            environment.codeGenerator.createDirectionFile(
+                deeplinks = deeplinks,
+                directionClassName = directionClassName,
+                routePackageName = routePackageName,
+                routeClassName = routeClassName,
+                parentRoutePackageName = parentRoutePackageName,
+                parentRouteClassName = parentRouteClassName,
+                functionPackageName = function.packageName.asString(),
+                functionName = function.simpleName.asString(),
+                routeParameterName = routeParameterName,
+            )
         }
 
-        environment.codeGenerator.createModuleRegistryFile(
-            packageName = navigationClassPackage,
-            directions = directionList,
-            fileName = fileName
-        )
+        if (directionList.isNotEmpty()) {
+            environment.codeGenerator.createModuleRegistryFile(
+                packageName = navigationClassPackage,
+                directions = directionList,
+                fileName = "${normalizeModuleName(moduleName)}DirectionRegistry".trim()
+            )
+        }
 
         return emptyList()
     }.getOrElse { exception ->
@@ -99,4 +110,14 @@ internal class LibraryProcessor(private val environment: SymbolProcessorEnvironm
         .replace("[-_]([a-zA-Z])".toRegex()) { it.groupValues.last().uppercase() }
         .trimEnd('_')
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+
+    private fun NavigationEntry.qualifiedNameForRoute(
+        predicate: NavigationEntry.() -> KClass<*>
+    ): String? = runCatching { predicate().qualifiedName.orEmpty() }
+        .getOrElse { exception ->
+            Regex("(.*ClassNotFoundException: )([a-zA-Z._]+)")
+                .find(exception.message.orEmpty())
+                ?.groupValues
+                ?.last()
+        }.takeIf { it != NavigationRoute::class.qualifiedName }
 }

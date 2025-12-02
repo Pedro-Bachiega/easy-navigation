@@ -11,6 +11,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
 import br.com.arch.toolkit.lumber.Lumber
+import com.pedrobneto.navigation.core.annotation.SafeNavigationApi
+import com.pedrobneto.navigation.core.annotation.UnsafeNavigationApi
 import com.pedrobneto.navigation.core.model.DirectionRegistry
 import com.pedrobneto.navigation.core.model.LaunchStrategy
 import com.pedrobneto.navigation.core.model.NavigationDeeplink
@@ -72,23 +74,6 @@ class NavigationController internal constructor(
     val currentRoute: NavigationRoute get() = backStack.last()
 
     /**
-     * Pops the top-most destination from the back stack.
-     *
-     * If the back stack has 1 route and the route has a parent, it will navigate to the parent route.
-     *
-     * @throws [IllegalArgumentException] if the parent route does not have a constructor with 0 parameters or a constructor where all parameters have default values.
-     * @throws [IllegalStateException] if at the root of the back stack and there is no parent route.
-     */
-    fun navigateUp() = popUpTo(targetRouteIndex = backStack.lastIndex - 1)
-
-    /**
-     * Pops the top-most destination from the back stack.
-     *
-     * @return `true` if the navigation was successful, `false` otherwise.
-     */
-    fun safeNavigateUp(): Boolean = runCatching { navigateUp() }.isSuccess
-
-    /**
      * Navigates to a given [NavigationRoute].
      *
      * The behavior of this navigation action is determined by the provided [LaunchStrategy].
@@ -112,6 +97,7 @@ class NavigationController internal constructor(
      * @throws IllegalArgumentException if no direction is found for the deeplink or if the
      * deeplink is malformed for the target route.
      */
+    @UnsafeNavigationApi
     @Throws(IllegalArgumentException::class)
     fun navigateTo(deeplink: String, strategy: LaunchStrategy = LaunchStrategy.NewTask()) =
         navigateTo(
@@ -129,10 +115,31 @@ class NavigationController internal constructor(
      * @param strategy The [LaunchStrategy] to apply to this navigation action.
      * @return `true` if the navigation was successful, `false` otherwise.
      */
+    @SafeNavigationApi
     fun safeNavigateTo(
         deeplink: String,
         strategy: LaunchStrategy = LaunchStrategy.NewTask()
     ): Boolean = runCatching { navigateTo(deeplink, strategy) }.isSuccess
+
+    /**
+     * Pops the top-most destination from the back stack.
+     *
+     * If the back stack has 1 route and the route has a parent, it will navigate to the parent route.
+     *
+     * @throws [IllegalArgumentException] if the parent route does not have a constructor with 0 parameters or a constructor where all parameters have default values.
+     * @throws [IllegalStateException] if at the root of the back stack and there is no parent route.
+     */
+    @UnsafeNavigationApi
+    @Throws(IllegalArgumentException::class, IllegalStateException::class)
+    fun navigateUp() = popUpTo(targetRouteIndex = backStack.lastIndex - 1)
+
+    /**
+     * Pops the top-most destination from the back stack.
+     *
+     * @return `true` if the navigation was successful, `false` otherwise.
+     */
+    @SafeNavigationApi
+    fun safeNavigateUp(): Boolean = runCatching { navigateUp() }.isSuccess
 
     /**
      * Pops the back stack up to a given `route` [NavigationRoute].
@@ -146,6 +153,7 @@ class NavigationController internal constructor(
      * and there is no parent route provided for that `route`. If a parent `route` is provided for that `route`,
      * it will be used as a destination to navigate to instead of throwing an exception.
      */
+    @UnsafeNavigationApi
     @Throws(IllegalStateException::class)
     fun popUpTo(route: NavigationRoute, inclusive: Boolean = false) {
         if (route !in backStack) {
@@ -167,6 +175,7 @@ class NavigationController internal constructor(
      * and there is no parent route provided for that `route`. If a parent `route` is provided for that `route`,
      * it will be used as a destination to navigate to instead of throwing an exception.
      */
+    @UnsafeNavigationApi
     @Throws(IllegalArgumentException::class, IllegalStateException::class)
     fun popUpTo(routeClass: KClass<out NavigationRoute>, inclusive: Boolean = false) {
         if (backStack.none { it::class == routeClass }) {
@@ -185,6 +194,7 @@ class NavigationController internal constructor(
      * @param inclusive If `true`, the destination itself will also be popped from the stack.
      * @return `true` if the pop operation was successful, `false` otherwise.
      */
+    @SafeNavigationApi
     fun safePopUpTo(direction: NavigationRoute, inclusive: Boolean = false): Boolean =
         runCatching { popUpTo(direction, inclusive) }.isSuccess
 

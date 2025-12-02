@@ -13,8 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.pedrobneto.navigation.annotation.NavigationEntry
 import com.pedrobneto.navigation.core.LocalNavigationController
+import com.pedrobneto.navigation.core.annotation.NavigationEntry
 import com.pedrobneto.navigation.core.model.LaunchStrategy
 import com.pedrobneto.navigation.model.FirstScreenRoute
 import com.pedrobneto.navigation.model.FourthScreenRoute

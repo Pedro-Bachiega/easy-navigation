@@ -1,5 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 pluginManagement {
     apply(from = "$rootDir/kmp-build-plugin/repositories.gradle.kts")
     val repositoryList: RepositoryHandler.() -> Unit by extra
@@ -19,11 +21,9 @@ rootProject.name = "easy-navigation"
 includeBuild("kmp-build-plugin")
 
 include(
-    ":annotation",
     ":core",
+    ":gradle-plugin",
     ":processor:application",
     ":processor:library",
-
     ":sample",
 )
- 

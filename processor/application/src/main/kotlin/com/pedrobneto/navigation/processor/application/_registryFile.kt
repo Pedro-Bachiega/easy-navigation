@@ -7,7 +7,7 @@ internal fun CodeGenerator.createGlobalRegistryFile(packageName: String, registr
     val fileName = "GlobalDirectionRegistry"
     val imports = listOf("com.pedrobneto.navigation.core.model.DirectionRegistry") + registries
     val registriesFormatted = if (registries.isEmpty()) {
-        "emptyList<DirectionRegistry>()"
+        "emptyList()"
     } else {
         "listOf(\n\t\t" + registries.joinToString(separator = ",\n\t\t") { registryQualifiedName ->
             registryQualifiedName.substringAfterLast(".")

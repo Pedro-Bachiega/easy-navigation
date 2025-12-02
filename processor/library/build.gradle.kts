@@ -37,7 +37,7 @@ tasks.withType<KotlinCompilationTask<*>>().configureEach {
 }
 
 dependencies {
-    implementation(project(":annotation"))
+    implementation(projects.core)
 
     // Arch Toolkit
     implementation(libs.toolkit.arch.lumber)
