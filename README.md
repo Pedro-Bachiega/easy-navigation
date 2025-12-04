@@ -35,7 +35,7 @@ Every destination in your app is represented by a type that implements the `Navi
 Example (from the sample app):
 
 ```kotlin
-import com.pedrobneto.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -150,13 +150,12 @@ For each annotated function, the **library processor**:
 2. Extracts any `deeplinks` (`"/second"`).
 3. Looks for a function parameter whose type matches the route (`route: SecondScreenRoute`).
 4. Generates a `*Direction` object (e.g., `SecondScreenRouteDirection`) in the **route’s package**.
-5. Generates a `*DirectionRegistry` object for the module (e.g., `SampleDirectionRegistry`) in the `com.pedrobneto.navigation.registry` package.
+5. Generates a `*DirectionRegistry` object for the module (e.g., `SampleDirectionRegistry`) in the `com.pedrobneto.easy.navigation.registry` package.
 
 ### 2. Global aggregation (processor:application)
 
 The **application processor** runs once in your main application module:
 
-- It requires a KSP argument `navigation.rootDir` pointing to your project's root directory.
 - It scans the project's `build/generated/ksp/**/navigation/registry/` directories to find all `*DirectionRegistry.kt` files.
 - It generates a single `GlobalDirectionRegistry` object that aggregates all directions from all modules.
 
@@ -195,18 +194,7 @@ dependencies {
 
 For a typical multi-module setup, you'll apply `library-processor` to feature modules and both processors to the main app module.
 
-### 2. Configure KSP root directory
-
-In the **application module** that consumes other feature modules, pass the root directory path to the application processor. This allows it to scan the entire project for generated registries.
-
-```kotlin
-// In your app's build.gradle.kts
-ksp {
-    arg("navigation.rootDir", rootDir.path)
-}
-```
-
-### 3. Define your routes
+### 2. Define your routes
 
 Create your `@Serializable` route types that implement `NavigationRoute`.
 
@@ -271,7 +259,7 @@ fun DetailsScreen(route: DetailsRoute) {
 In your main `App` composable, wrap your UI in the `Navigation` composable.
 
 ```kotlin
-import com.pedrobneto.navigation.registry.GlobalDirectionRegistry // Generated
+import com.pedrobneto.easy.navigation.registry.GlobalDirectionRegistry // Generated
 
 @Composable
 fun App() {

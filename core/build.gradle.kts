@@ -4,7 +4,7 @@ plugins {
     id("plugin-compose")
 }
 
-android.namespace = "com.pedrobneto.navigation.core"
+android.namespace = "com.pedrobneto.easy.navigation.core"
 
 kotlin {
     sourceSets {

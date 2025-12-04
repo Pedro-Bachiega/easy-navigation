@@ -36,7 +36,7 @@ There are currently no tests in this repo, but standard Gradle test tasks are wi
   ```
 - Run a single test method:
   ```bash
-  ./gradlew :core:jvmTest --tests "com.pedrobneto.navigation.core.SomeTest.testCase"
+  ./gradlew :core:jvmTest --tests "com.pedrobneto.easy.navigation.core.SomeTest.testCase"
   ```
 
 ## High-level architecture
@@ -91,18 +91,18 @@ Navigation code is generated through two KSP processors, both run from the consu
      - Detects which parameter (if any) is of the route type to forward into the composable.
      - Generates:
        - A `*Direction` object in the route’s package extending `NavigationDirection`, wiring `Draw` to call the annotated composable.
-       - A `<ModuleName>DirectionRegistry` in `com.pedrobneto.navigation.registry` listing all generated `*Direction` objects for that module.
+       - A `<ModuleName>DirectionRegistry` in `com.pedrobneto.easy.navigation.registry` listing all generated `*Direction` objects for that module.
    - Module naming is normalized (e.g., hyphens/underscores converted to camel case) to derive the registry class name.
 2. **Global aggregation (`processor:application`)**
-   - `ApplicationProcessor` expects a `navigation.rootDir` KSP option (set in `sample/build.gradle.kts` to the repo root).
+   - `ApplicationProcessor` expects a `easy-navigation.rootDir` KSP option (set in `sample/build.gradle.kts` to the repo root).
    - It walks the file tree under that root looking for generated `*DirectionRegistry.kt` files in `build/generated/ksp/**/navigation/registry/`.
-   - It parses their package and class names and generates a single `GlobalDirectionRegistry` object in `com.pedrobneto.navigation.registry` that:
+   - It parses their package and class names and generates a single `GlobalDirectionRegistry` object in `com.pedrobneto.easy.navigation.registry` that:
      - Extends `DirectionRegistry`.
      - Flattens all module registries into one combined `directions` list.
 
 The typical consumer pattern (shown in the `sample` app) is:
 - Include both processors via KSP (`kspJvm(project(":processor:library"))` and `kspJvm(project(":processor:application"))`).
-- Pass `navigation.rootDir` so the application processor can discover generated registries.
+- Pass `easy-navigation.rootDir` so the application processor can discover generated registries.
 
 ### Sample application (`sample` module)
 The `sample` module is a Compose Desktop app that demonstrates the intended usage:

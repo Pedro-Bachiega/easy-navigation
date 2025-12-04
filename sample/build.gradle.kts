@@ -4,6 +4,8 @@ plugins {
     id("plugin-desktop-application")
     alias(libs.plugins.google.ksp)
     alias(libs.plugins.jetbrains.serialization)
+    alias(libs.plugins.easy.navigation.library)
+    alias(libs.plugins.easy.navigation.application)
 }
 
 kotlin {
@@ -23,18 +25,9 @@ kotlin {
 
             implementation(libs.jetbrains.serialization)
 
-            implementation(project(":core"))
+            implementation(libs.easy.navigation.core)
         }
     }
-}
-
-dependencies {
-    kspJvm(project(":processor:library"))
-    kspJvm(project(":processor:application"))
-}
-
-ksp {
-    arg("navigation.rootDir", rootDir.path)
 }
 
 compose.desktop {
