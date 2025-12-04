@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.jvm)
     signing
     alias(libs.plugins.vanniktech.publish)
+    id("plugin-test")
 }
 
 apply(from = "$rootDir/versioning.gradle.kts")
@@ -43,4 +44,7 @@ dependencies {
     implementation(libs.toolkit.arch.lumber)
     // Google
     implementation(libs.google.ksp)
+
+    testImplementation(libs.test.mockk)
+    testImplementation(kotlin("test"))
 }

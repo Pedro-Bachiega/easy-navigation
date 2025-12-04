@@ -14,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class NavigationControllerTest {
@@ -48,6 +49,15 @@ class NavigationControllerTest {
         object : NavigationDirection(
             deeplinks = emptyList(),
             routeClass = TestSettingsRoute::class
+        ) {
+            @Composable
+            override fun Draw(route: NavigationRoute) {
+            }
+        },
+        object : NavigationDirection(
+            deeplinks = emptyList(),
+            routeClass = TestHomeWithParameterizedParent::class,
+            parentRouteClass = TestDetailsRoute::class
         ) {
             @Composable
             override fun Draw(route: NavigationRoute) {
@@ -109,6 +119,15 @@ class NavigationControllerTest {
     fun `navigateUp throws on empty back stack and no parent route provided`() {
         assertEquals(1, controller.backStack.size)
         assertFailsWith<IllegalStateException> {
+            controller.navigateUp()
+        }
+    }
+
+    @Test
+    fun `navigateUp throws on empty back stack and parent route has parameters`() {
+        controller.navigateTo(TestHomeWithParameterizedParent, LaunchStrategy.NewStack)
+        assertEquals(1, controller.backStack.size)
+        assertFailsWith<IllegalArgumentException> {
             controller.navigateUp()
         }
     }
@@ -224,7 +243,95 @@ class NavigationControllerTest {
             controller.popUpTo(TestHomeRoute, inclusive = true)
         }
     }
+
+    @Test
+    fun `popUpTo throws exception when route is not on the stack`() {
+        assertEquals(1, controller.backStack.size)
+        assertFailsWith<IllegalArgumentException> {
+            controller.popUpTo(TestDetailsRoute(1))
+        }
+    }
+
+    @Test
+    fun `popUpTo with KClass removes entries above target`() {
+        controller.navigateTo(TestDetailsRoute(1))
+        controller.navigateTo(TestSettingsRoute)
+
+        assertEquals(3, controller.backStack.size)
+
+        controller.popUpTo(TestHomeRoute::class)
+
+        assertEquals(1, controller.backStack.size)
+        assertEquals(TestHomeRoute, controller.backStack.last())
+    }
+
+    @Test
+    fun `popUpTo with KClass and inclusive=true removes target as well`() {
+        controller.navigateTo(TestDetailsRoute(1))
+        controller.navigateTo(TestSettingsRoute)
+
+        assertEquals(3, controller.backStack.size)
+
+        controller.popUpTo(TestDetailsRoute::class, inclusive = true)
+
+        assertEquals(1, controller.backStack.size)
+        assertEquals(TestHomeRoute, controller.backStack.last())
+    }
+
+    @Test
+    fun `popUpTo with KClass inclusive root throws exception`() {
+        assertEquals(1, controller.backStack.size)
+        assertFailsWith<IllegalStateException> {
+            controller.popUpTo(TestHomeRoute::class, inclusive = true)
+        }
+    }
+
+    @Test
+    fun `popUpTo with KClass throws exception when route is not on the stack`() {
+        assertEquals(1, controller.backStack.size)
+        assertFailsWith<IllegalArgumentException> {
+            controller.popUpTo(TestDetailsRoute::class)
+        }
+    }
+
+    @Test
+    fun `safePopUpTo returns true on success`() {
+        controller.navigateTo(TestDetailsRoute(1))
+        controller.navigateTo(TestSettingsRoute)
+
+        assertEquals(3, controller.backStack.size)
+
+        assertTrue(controller.safePopUpTo(TestDetailsRoute(1)))
+
+        assertEquals(2, controller.backStack.size)
+    }
+
+    @Test
+    fun `safePopUpTo returns false on failure`() {
+        assertEquals(1, controller.backStack.size)
+        assertFalse(controller.safePopUpTo(TestHomeRoute, inclusive = true))
+        assertEquals(1, controller.backStack.size)
+    }
     // endregion
+
+    @Test
+    fun `directionProvider provides a NavEntry for a given NavigationRoute`() {
+        val navEntry = controller.directionProvider(TestHomeRoute)
+        assertNotNull(navEntry)
+    }
+
+    @Test
+    fun `currentDirection returns the direction for the current route`() {
+        assertEquals(testDirections.first { it.routeClass == TestHomeRoute::class }, controller.currentDirection)
+    }
+
+    @Test
+    fun `currentDirection throws error if no direction is found`() {
+        controller.navigateTo(UnregisteredRoute, LaunchStrategy.NewStack)
+        assertFailsWith<IllegalStateException> {
+            controller.currentDirection
+        }
+    }
 
     @Serializable
     data object TestHomeRoute : NavigationRoute
@@ -233,8 +340,14 @@ class NavigationControllerTest {
     data object TestHomeRouteWithParent : NavigationRoute
 
     @Serializable
+    data object TestHomeWithParameterizedParent : NavigationRoute
+
+    @Serializable
     data class TestDetailsRoute(val id: Long) : NavigationRoute
 
     @Serializable
     data object TestSettingsRoute : NavigationRoute
+
+    @Serializable
+    data object UnregisteredRoute : NavigationRoute
 }

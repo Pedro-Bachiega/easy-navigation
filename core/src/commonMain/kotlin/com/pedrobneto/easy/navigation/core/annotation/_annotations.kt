@@ -56,3 +56,11 @@ annotation class ParentRoute(val value: KClass<out NavigationRoute>)
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
 annotation class Scope(val value: String)
+
+/**
+ * Marks the route as a direction to be registered in the `GlobalDirectionRegistry`.
+ */
+@Repeatable
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
+annotation class GlobalScope

@@ -26,4 +26,5 @@ include(
     ":processor:application",
     ":processor:library",
     ":sample",
+    ":test",
 )

@@ -4,6 +4,7 @@ import com.google.devtools.ksp.symbol.KSFile
 
 internal data class Direction(
     val ksFile: KSFile,
+    val isGlobal: Boolean,
     val scopes: List<String>,
     val deeplinks: List<String>,
     val directionClassName: String,

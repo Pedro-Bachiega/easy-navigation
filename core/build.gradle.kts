@@ -21,6 +21,8 @@ kotlin {
             implementation(libs.jetbrains.serialization)
 
             implementation(libs.toolkit.arch.lumber)
+
+            implementation(projects.test)
         }
 
         commonTest.dependencies {

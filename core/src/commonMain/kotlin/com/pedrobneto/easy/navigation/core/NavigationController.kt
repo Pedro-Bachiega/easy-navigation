@@ -18,6 +18,7 @@ import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.test.KoverExcludes
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
@@ -27,6 +28,7 @@ import kotlin.reflect.KClass
  * A CompositionLocal that provides access to the [NavigationController] instance.
  * This should be used to access the navigation controller from within a composable.
  */
+@KoverExcludes
 val LocalNavigationController: ProvidableCompositionLocal<NavigationController> =
     staticCompositionLocalOf { error("Navigation not initialized. Make sure you have a Navigation composable in your hierarchy.") }
 
@@ -51,7 +53,7 @@ class NavigationController internal constructor(
     private val directions: List<NavigationDirection> =
         directionRegistryList.flatMap(DirectionRegistry::directions)
 
-    private val currentDirection: NavigationDirection
+    internal val currentDirection: NavigationDirection
         get() = directions.find { it.routeClass == currentRoute::class }
             ?: error("No direction found for route $currentRoute")
 
@@ -250,6 +252,7 @@ class NavigationController internal constructor(
          * @return A remembered [NavigationController] instance.
          */
         @Composable
+        @KoverExcludes
         operator fun invoke(
             initialRoute: NavigationRoute,
             directionRegistries: List<DirectionRegistry>,

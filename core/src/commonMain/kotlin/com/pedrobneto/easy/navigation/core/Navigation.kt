@@ -20,6 +20,7 @@ import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
 import androidx.navigationevent.NavigationEvent
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.test.KoverExcludes
 
 /**
  * A composable that provides a navigation controller and displays the current navigation entry.
@@ -40,6 +41,7 @@ import com.pedrobneto.easy.navigation.core.model.NavigationRoute
  * @param predictivePopTransitionSpec The transition spec to be used for predictive pop transitions between scenes.
  */
 @Composable
+@KoverExcludes
 fun Navigation(
     modifier: Modifier,
     initialRoute: NavigationRoute,

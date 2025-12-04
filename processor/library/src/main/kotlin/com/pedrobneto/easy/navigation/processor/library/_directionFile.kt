@@ -6,6 +6,7 @@ import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
+import com.pedrobneto.easy.navigation.core.annotation.GlobalScope
 import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.annotation.Scope
@@ -23,7 +24,7 @@ private fun qualifiedNameForRoute(predicate: () -> KClass<*>): String? =
         }.takeIf { it != NavigationRoute::class.qualifiedName }
 
 @OptIn(KspExperimental::class)
-internal fun CodeGenerator.process(
+internal fun CodeGenerator.createDirection(
     function: KSFunctionDeclaration,
     moduleName: String,
     isMultiplatformWithSingleTarget: Boolean
@@ -54,6 +55,9 @@ internal fun CodeGenerator.process(
         .map(Scope::value)
         .toList()
 
+    val isGlobal = function.getAnnotationsByType(GlobalScope::class)
+        .firstOrNull() != null
+
     val routePackageName = routeQualifiedName.substringBeforeLast('.')
     val routeClassName = routeQualifiedName.substringAfterLast('.')
     val directionClassName = "${routeClassName}Direction"
@@ -67,6 +71,7 @@ internal fun CodeGenerator.process(
 
     val direction = Direction(
         ksFile = ksFile,
+        isGlobal = isGlobal,
         scopes = scopes,
         deeplinks = deeplinks,
         directionClassName = directionClassName,
@@ -82,7 +87,7 @@ internal fun CodeGenerator.process(
     return direction.also { it.createDirectionFile(this) }
 }
 
-internal fun Direction.createDirectionFile(generator: CodeGenerator) {
+private fun Direction.createDirectionFile(generator: CodeGenerator) {
     val parameter = routeParameterName?.let { "$it = route as $routeClassName" }.orEmpty()
 
     val (parentRouteClassParameter, parentRouteClassImport) =
@@ -94,7 +99,8 @@ internal fun Direction.createDirectionFile(generator: CodeGenerator) {
 
     val imports = listOfNotNull(
         "androidx.compose.runtime.Composable",
-        "com.pedrobneto.easy.navigation.core.model.NavigationDeeplink",
+        "com.pedrobneto.easy.navigation.core.annotation.GlobalScope".takeIf { isGlobal },
+        "com.pedrobneto.easy.navigation.core.model.NavigationDeeplink".takeIf { deeplinks.isNotEmpty() },
         "com.pedrobneto.easy.navigation.core.model.NavigationDirection",
         "com.pedrobneto.easy.navigation.core.model.NavigationRoute",
         "$functionPackageName.$functionName",
@@ -117,7 +123,7 @@ internal fun Direction.createDirectionFile(generator: CodeGenerator) {
 package $routePackageName
 
 ${imports.joinToString(separator = "\n") { "import $it" }}
-
+${"\n@GlobalScope".takeIf { isGlobal }.orEmpty()}
 internal data object $directionClassName : NavigationDirection(
     $constructorParametersFormatted
 ) {
