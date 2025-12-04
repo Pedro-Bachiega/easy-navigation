@@ -56,7 +56,7 @@ abstract class BaseGradlePlugin : Plugin<Project> {
         }
 
         val dependency =
-            "io.github.pedro-bachiega:easy-navigation-$processor-processor:0.0.1-alpha02"
+            "io.github.pedro-bachiega:easy-navigation-$processor-processor:0.0.1-alpha04"
         when (val kotlinExtension = kotlinExtension) {
             is KotlinSingleTargetExtension<*> -> {
                 dependencies.add("ksp", dependency)
