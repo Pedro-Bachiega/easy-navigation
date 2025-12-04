@@ -7,19 +7,35 @@ import com.pedrobneto.easy.navigation.core.NavigationController
  * This is analogous to Android's activity launch modes.
  */
 sealed class LaunchStrategy {
+    /**
+     * Handles the navigation to a given [route] based on the specific strategy,
+     * modifying the [controller]'s back stack.
+     */
     internal abstract fun handleNavigation(route: NavigationRoute, controller: NavigationController)
 
     /**
+     * The default navigation behavior. A new instance of the destination is always pushed onto the
+     * back stack.
+     */
+    data object Default : LaunchStrategy() {
+        override fun handleNavigation(route: NavigationRoute, controller: NavigationController) {
+            controller.backStack.add(route)
+        }
+    }
+
+    /**
      * The `SingleTop` launch strategy affects how a destination is handled when it's already
-     * in the back stack.
+     * present in the back stack.
      *
-     * If the destination is already at the top of the stack, it will be replaced with the new instance,
-     * useful for updating route arguments without changing the screen.
+     * If there's a single instance of the destination and it is already at the top of the stack, it's replaced by the
+     * new instance. This is useful for updating the current screen with new arguments without
+     * pushing a new copy onto the stack.
      *
      * @property clearTop If `true`, and an instance of the destination exists in the back stack but not at the top,
-     * all destinations above it will be popped, bringing the existing instance to the top.
-     * If `false`, and an instance of the destination exists in the back stack but not at the top,
-     * the existing destination will be cleared and a new instance will be pushed on top of the stack.
+     * the stack is popped until the first instance of that destination is reached. This first instance
+     * and all destinations above it are removed, and the new destination is pushed onto the stack.
+     * If `false`, and instances of the destination exist in the back stack, all of them are removed,
+     * and the new destination is pushed to the top of the stack.
      */
     class SingleTop(val clearTop: Boolean = true) : LaunchStrategy() {
         override fun handleNavigation(route: NavigationRoute, controller: NavigationController) {
@@ -48,16 +64,13 @@ sealed class LaunchStrategy {
     }
 
     /**
-     * A launch strategy that can clear the back stack before launching the new destination.
-     *
-     * @property clearStack If `true`, the entire back stack is cleared and the new destination becomes the new root.
+     * The entire back stack is cleared and the new destination becomes the new root.
      * This is useful for flows that should not allow returning to the previous flow, such as after a login or logout.
-     * If `false`, a new destination is simply pushed on top of the current back stack.
      */
-    class NewTask(val clearStack: Boolean = false) : LaunchStrategy() {
+    data object NewStack : LaunchStrategy() {
         override fun handleNavigation(route: NavigationRoute, controller: NavigationController) {
             controller.backStack.add(route)
-            if (clearStack) controller.backStack.removeRange(0, controller.backStack.lastIndex)
+            controller.backStack.removeRange(0, controller.backStack.lastIndex)
         }
     }
 }

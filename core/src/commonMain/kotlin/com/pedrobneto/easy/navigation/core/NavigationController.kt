@@ -82,7 +82,7 @@ class NavigationController internal constructor(
      * @param strategy The [LaunchStrategy] to apply to this navigation. Defaults to pushing a new
      * destination on the stack.
      */
-    fun navigateTo(route: NavigationRoute, strategy: LaunchStrategy = LaunchStrategy.NewTask()) =
+    fun navigateTo(route: NavigationRoute, strategy: LaunchStrategy = LaunchStrategy.Default) =
         strategy.handleNavigation(route = route, controller = this)
 
 
@@ -99,7 +99,7 @@ class NavigationController internal constructor(
      */
     @UnsafeNavigationApi
     @Throws(IllegalArgumentException::class)
-    fun navigateTo(deeplink: String, strategy: LaunchStrategy = LaunchStrategy.NewTask()) =
+    fun navigateTo(deeplink: String, strategy: LaunchStrategy = LaunchStrategy.Default) =
         navigateTo(
             route = NavigationDeeplink(deeplink).resolve(json, directions),
             strategy = strategy
@@ -118,7 +118,7 @@ class NavigationController internal constructor(
     @SafeNavigationApi
     fun safeNavigateTo(
         deeplink: String,
-        strategy: LaunchStrategy = LaunchStrategy.NewTask()
+        strategy: LaunchStrategy = LaunchStrategy.Default
     ): Boolean = runCatching { navigateTo(deeplink, strategy) }.isSuccess
 
     /**
@@ -217,7 +217,7 @@ class NavigationController internal constructor(
             shouldTryNavigatingToParent -> {
                 runCatching {
                     val route = json.decodeFromString(parentRouteClass.serializer(), "{}")
-                    navigateTo(route = route, strategy = LaunchStrategy.NewTask(clearStack = true))
+                    navigateTo(route = route, strategy = LaunchStrategy.NewStack)
                 }.getOrElse { exception ->
                     Lumber.tag("NavigationController")
                         .error(

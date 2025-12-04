@@ -49,10 +49,7 @@ internal fun FourthScreenComposable(
         Button(
             modifier = Modifier.weight(1f),
             onClick = {
-                navigation.navigateTo(
-                    deeplink = "/first",
-                    strategy = LaunchStrategy.NewTask(true)
-                )
+                navigation.navigateTo(deeplink = "/first", strategy = LaunchStrategy.NewStack)
             },
             content = { Text("Back using Deeplink") }
         )

@@ -25,7 +25,7 @@ kotlin {
 
             implementation(libs.jetbrains.serialization)
 
-            implementation(libs.easy.navigation.core)
+            implementation(projects.core)
         }
     }
 }

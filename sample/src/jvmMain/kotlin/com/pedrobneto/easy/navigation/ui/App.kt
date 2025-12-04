@@ -9,6 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.pedrobneto.easy.navigation.core.Navigation
 import com.pedrobneto.easy.navigation.model.FirstScopedRoute
+import com.pedrobneto.easy.navigation.model.FirstScreenRoute
+import com.pedrobneto.easy.navigation.registry.SampleDirectionRegistry
 import com.pedrobneto.easy.navigation.registry.SampleScopeDirectionRegistry
 
 @Composable
@@ -16,14 +18,14 @@ internal fun App() {
     MaterialTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             // Generated per scope using @Scope annotation
-            val (initialRoute, registries) = remember {
-                FirstScopedRoute to listOf(SampleScopeDirectionRegistry)
-            }
+//            val (initialRoute, registries) = remember {
+//                FirstScopedRoute to listOf(SampleScopeDirectionRegistry)
+//            }
 
             // Generated per module using library gradle plugin
-//            val (initialRoute, registries) = remember {
-//                FirstScreenRoute to listOf(SampleDirectionRegistry)
-//            }
+            val (initialRoute, registries) = remember {
+                FirstScreenRoute to listOf(SampleDirectionRegistry)
+            }
 
             // Generated aggregating all modules' registries using application gradle plugin
 //            val (initialRoute, registries) = remember {

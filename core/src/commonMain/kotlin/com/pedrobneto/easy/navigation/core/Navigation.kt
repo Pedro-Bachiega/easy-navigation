@@ -3,6 +3,9 @@ package com.pedrobneto.easy.navigation.core
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -13,9 +16,7 @@ import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
-import androidx.navigation3.ui.defaultPopTransitionSpec
 import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
-import androidx.navigation3.ui.defaultTransitionSpec
 import androidx.navigationevent.NavigationEvent
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
@@ -48,10 +49,14 @@ fun Navigation(
         listOf(rememberSaveableStateHolderNavEntryDecorator()),
     sceneStrategy: SceneStrategy<NavigationRoute> = SinglePaneSceneStrategy(),
     sizeTransform: SizeTransform? = null,
-    transitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform =
-        defaultTransitionSpec(),
-    popTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform =
-        defaultPopTransitionSpec(),
+    transitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
+        slideInHorizontally { fullWidth -> fullWidth } togetherWith
+                slideOutHorizontally { fullWidth -> -fullWidth }
+    },
+    popTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
+        slideInHorizontally { fullWidth -> -fullWidth } togetherWith
+                slideOutHorizontally { fullWidth -> fullWidth }
+    },
     predictivePopTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.(
         @NavigationEvent.SwipeEdge Int
     ) -> ContentTransform = defaultPredictivePopTransitionSpec(),

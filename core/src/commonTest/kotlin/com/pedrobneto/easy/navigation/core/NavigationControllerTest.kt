@@ -98,7 +98,7 @@ class NavigationControllerTest {
 
     @Test
     fun `navigateUp navigates to parent route and clears back stack when on empty back stack and parent route was provided`() {
-        controller.navigateTo(TestHomeRouteWithParent, LaunchStrategy.NewTask(clearStack = true))
+        controller.navigateTo(TestHomeRouteWithParent, LaunchStrategy.NewStack)
         assertEquals(1, controller.backStack.size)
         controller.navigateUp()
         assertEquals(1, controller.backStack.size)
@@ -124,9 +124,9 @@ class NavigationControllerTest {
     }
 
     @Test
-    fun `navigateTo with NewTask(clearStack=true) clears back stack`() {
+    fun `navigateTo with NewStack clears back stack`() {
         controller.navigateTo(TestDetailsRoute(1))
-        controller.navigateTo(TestSettingsRoute, LaunchStrategy.NewTask(clearStack = true))
+        controller.navigateTo(TestSettingsRoute, LaunchStrategy.NewStack)
 
         assertEquals(1, controller.backStack.size)
         assertEquals(TestSettingsRoute, controller.backStack.last())
