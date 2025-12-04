@@ -12,7 +12,7 @@
         <list>
           <option value="clean" />
           <option value="assemble" />
-          <option value="publishToMavenCentral" />
+          <option value="publish" />
           <option value=":gradle-plugin:publishPlugins" />
         </list>
       </option>

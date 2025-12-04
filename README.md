@@ -1,27 +1,25 @@
 # Easy Navigation
 
-A type-safe, declarative, and boilerplate-free navigation library for Compose Multiplatform, built on top of JetBrains' `navigation3` and powered by KSP.
+A type-safe, declarative, and boilerplate-free navigation library for Compose Multiplatform, built on top of JetBrains' `navigation-compose` and powered by KSP.
 
 The goal is to make navigation in Compose-based apps simple and robust by:
 - Representing each destination as a `@Serializable` `NavigationRoute` Kotlin type.
-- Generating navigation logic and registries from simple `@NavigationEntry` annotations.
+- Generating navigation logic and registries from simple `@Route`, `@Deeplink`, `@ParentRoute`, and `@Scope` annotations.
 - Providing a concise runtime (`NavigationController` + `Navigation` composable) to manage the back stack and navigation lifecycle.
 
 ## Modules overview
 
 This repository is organized into the following Gradle modules:
-- `annotation` – Defines the `@NavigationEntry` annotation used to mark composable destinations.
 - `core` – Contains the runtime navigation primitives, including `NavigationController`, `LaunchStrategy`, and the `Navigation` composable.
-- `processor:library` – A KSP processor that generates per-module `*Direction` classes and `*DirectionRegistry` objects from `@NavigationEntry` usage.
+- `gradle-plugin` – Contains the `easy-navigation-application` and `easy-navigation-library` plugins, which simplify the integration of the KSP processors.
+- `processor:library` – A KSP processor that generates per-module `*Direction` classes and `*DirectionRegistry` objects from `@Route`, `@Deeplink`, `@ParentRoute` and `@Scope` usage.
 - `processor:application` – A KSP processor that aggregates all module registries into a single `GlobalDirectionRegistry` for the application.
 - `sample` – A Compose for Desktop sample app that demonstrates how to define routes, annotate destinations, and wire up navigation.
 - `kmp-build-plugin` – An internal Gradle plugin for configuring multiplatform targets, linting, and other common build behaviors.
 
 For consumers of the library, the key modules are:
-- `annotation`
 - `core`
-- `processor:library`
-- `processor:application`
+- `gradle-plugin`
 
 ## Concepts
 
@@ -56,12 +54,27 @@ data class ThirdScreenRoute(
 
 These types provide compile-time safety for navigation calls and are used by the generated code to link destinations to their composable implementations.
 
+### Scoping Destinations
+
+The library supports organizing destinations into scopes, which are essentially independent navigation graphs. This is useful for creating nested navigation flows or separating features.
+
+- **@Scope("scopeName")**: Assigns a destination to a specific scope. The application processor will generate a `ScopeNameDirectionRegistry` containing all destinations with that scope.
+- **@GlobalScope**: A convenience annotation that is equivalent to `@Scope("global")`. It assigns a destination to the global navigation graph.
+
+By default, if no scope is specified, a destination is only added to its local module registry. To make it accessible from other modules, you must assign it to a scope.
+
+### Safe vs. Unsafe Navigation
+
+The navigation controller offers two styles for invoking navigation actions that can potentially fail (e.g., navigating via a malformed deeplink or popping the last item from the back stack):
+- **Unsafe API**: Functions annotated with `@UnsafeNavigationApi` (e.g., `navigateTo(deeplink: String)`, `navigateUp()`). These methods will throw an exception (like `IllegalArgumentException` or `IllegalStateException`) if the navigation action cannot be performed. They are suitable for cases where a navigation failure is considered a programmer error and should result in a crash.
+- **Safe API**: Functions annotated with `@SafeNavigationApi` (e.g., `safeNavigateTo(deeplink: String)`, `safeNavigateUp()`). These methods wrap the unsafe calls in a `runCatching` block and return a `Boolean` indicating whether the navigation was successful. They provide a straightforward way to handle potential failures gracefully without needing to write `try-catch` blocks.
+
 ### NavigationDirection and DirectionRegistry
 
 You never have to write navigation graph code by hand. Instead, the library **generates** it:
 
-- A `*Direction` object for each composable annotated with `@NavigationEntry`.
-- A `*DirectionRegistry` object for each module, which lists all the directions within that module.
+- A `*Direction` object for each composable annotated with `@Route`.
+- A `*DirectionRegistry` object for each module and for each scope, which lists all the directions within that module or scope.
 
 Conceptually, a `NavigationDirection`:
 - Knows the `routeClass: KClass<out NavigationRoute>`.
@@ -84,11 +97,18 @@ The core runtime lives in the `core` module:
 
 - `NavigationController` maintains the back stack as a `SnapshotStateList<NavigationRoute>`.
 - It is provided to the composable tree via `LocalNavigationController`.
-- It exposes simple, powerful operations for navigation:
-  - `navigateTo(route: NavigationRoute, strategy: LaunchStrategy = ...)`
-  - `navigateTo(deeplink: String, strategy: LaunchStrategy = ...)`
-  - `navigateUp()`: Pops the back stack. Returns `true` on success.
-  - `popUpTo(direction: NavigationRoute, inclusive: Boolean = false)`: Pops the back stack to a specific destination.
+- It exposes powerful operations for navigation, available in two styles: `unsafe` (throws on error) and `safe` (returns `Boolean`).
+
+**Unsafe API (`@UnsafeNavigationApi`)**
+  - `navigateTo(route: NavigationRoute, strategy: LaunchStrategy = ...)`: Navigates to a typed route.
+  - `navigateTo(deeplink: String, strategy: LaunchStrategy = ...)`: Navigates to a deeplink, throws if the deeplink is invalid or can't be resolved.
+  - `navigateUp()`: Pops the back stack. Throws if at the root of the back stack and there's no parent route.
+  - `popUpTo(direction: NavigationRoute, inclusive: Boolean = false)`: Pops the back stack to a specific destination. Throws if the destination is not in the back stack.
+
+**Safe API (`@SafeNavigationApi`)**
+  - `safeNavigateTo(deeplink: String, strategy: LaunchStrategy = ...)`: Navigates to a deeplink, returning `true` on success and `false` on failure.
+  - `safeNavigateUp()`: Pops the back stack, returning `true` on success and `false` on failure (e.g., if at the root).
+  - `safePopUpTo(direction: NavigationRoute, inclusive: Boolean = false)`: Pops the back stack to a specific destination, returning `true` on success and `false` on failure.
 
 The `Navigation` composable is the root of the navigation system:
 
@@ -109,7 +129,7 @@ fun Navigation(
 It performs three key tasks:
 1. Creates and remembers a `NavigationController` with the provided `initialRoute` and `directionRegistries`.
 2. Provides this controller to the rest of the UI tree via `LocalNavigationController`.
-3. Renders the current destination using `NavDisplay` from `androidx.navigation3.ui`, handling transitions and state restoration automatically.
+3. Renders the current destination using `NavHost` from `androidx.navigation.compose`, handling transitions and state restoration automatically.
 
 ### LaunchStrategy
 
@@ -129,11 +149,13 @@ Navigation code is generated in two stages using KSP.
 
 ### 1. Per-module generation (processor:library)
 
-You annotate your destination composables with `@NavigationEntry`:
+You annotate your destination composables with `@Route`, `@Deeplink`, `@ParentRoute` and `@Scope` annotations:
 
 ```kotlin
 @Composable
-@NavigationEntry(route = SecondScreenRoute::class, deeplinks = ["/second"])
+@Route(SecondScreenRoute::class)
+@Deeplink("/second")
+@GlobalScope
 fun SecondScreenComposable(
     modifier: Modifier = Modifier,
     // The processor injects the type-safe route object
@@ -148,27 +170,34 @@ For each annotated function, the **library processor**:
 
 1. Reads the `route` KClass (`SecondScreenRoute::class`).
 2. Extracts any `deeplinks` (`"/second"`).
-3. Looks for a function parameter whose type matches the route (`route: SecondScreenRoute`).
-4. Generates a `*Direction` object (e.g., `SecondScreenRouteDirection`) in the **route’s package**.
-5. Generates a `*DirectionRegistry` object for the module (e.g., `SampleDirectionRegistry`) in the `com.pedrobneto.easy.navigation.registry` package.
+3. Extracts any scopes (e.g., `@GlobalScope`).
+4. Looks for a function parameter whose type matches the route (`route: SecondScreenRoute`).
+5. Generates a `*Direction` object (e.g., `SecondScreenRouteDirection`) in the **route’s package**.
+6. Generates a `*DirectionRegistry` object for the module (e.g., `SampleDirectionRegistry`) in the `com.pedrobneto.easy.navigation.registry` package.
 
 ### 2. Global aggregation (processor:application)
 
 The **application processor** runs once in your main application module:
 
 - It scans the project's `build/generated/ksp/**/navigation/registry/` directories to find all `*DirectionRegistry.kt` files.
-- It generates a single `GlobalDirectionRegistry` object that aggregates all directions from all modules.
+- It generates a single `GlobalDirectionRegistry` object that aggregates all directions from all modules that are annotated with `@GlobalScope`.
+- It also generates a `*DirectionRegistry` for each custom scope.
 
 ```kotlin
 // Generated code (conceptual)
 object GlobalDirectionRegistry : DirectionRegistry(
-    directions = SampleDirectionRegistry.directions +
-                 FeatureADirectionRegistry.directions +
+    directions = SampleDirectionRegistry.directions.filter { it.isGlobal } +
+                 FeatureADirectionRegistry.directions.filter { it.isGlobal } +
+                 ...
+)
+
+object SettingsDirectionRegistry : DirectionRegistry(
+    directions = SettingsModuleDirectionRegistry.directions.filter { it.isSettings } + 
                  ...
 )
 ```
 
-This automated aggregation means your app can simply reference `GlobalDirectionRegistry` without needing to know about individual feature module registries.
+This automated aggregation means your app can simply reference `GlobalDirectionRegistry`, `SettingsDirectionRegistry`, etc. without needing to know about individual feature module registries.
 
 ## Using easy-navigation in your project
 
@@ -176,25 +205,47 @@ This section outlines the steps to integrate and use the library in a Compose Mu
 
 > Note: Replace `<version>` with the appropriate library version.
 
-### 1. Add dependencies
+### 1. Add the Gradle plugin
+
+In your `settings.gradle.kts`, add the following to the `pluginManagement` block:
+
+```kotlin
+pluginManagement {
+    repositories {
+        // ...
+        maven("https://oss.sonatype.org/content/repositories/snapshots")
+    }
+}
+```
+
+Then, in your module-level `build.gradle.kts` files, apply the appropriate plugin:
+
+**For library modules:**
+```kotlin
+plugins {
+    id("io.github.pedro-bachiega.easy-navigation-library")
+}
+```
+
+**For your application module:**
+```kotlin
+plugins {
+    id("io.github.pedro-bachiega.easy-navigation-application")
+}
+```
+
+### 2. Add dependencies
 
 In your app module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
     // Public API (needed by any module defining routes or screens)
-    implementation("io.github.pedro-bachiega:easy-navigation-annotation:<version>")
     implementation("io.github.pedro-bachiega:easy-navigation-core:<version>")
-
-    // KSP Processors (typically in the main app module)
-    ksp("io.github.pedro-bachiega:easy-navigation-application-processor:<version>")
-    ksp("io.github.pedro-bachiega:easy-navigation-library-processor:<version>")
 }
 ```
 
-For a typical multi-module setup, you'll apply `library-processor` to feature modules and both processors to the main app module.
-
-### 2. Define your routes
+### 3. Define your routes
 
 Create your `@Serializable` route types that implement `NavigationRoute`.
 
@@ -211,13 +262,15 @@ data class DetailsRoute(
 
 ### 4. Annotate your composable destinations
 
-Mark each screen with `@NavigationEntry`, providing its route type and any deeplinks.
+Mark each screen with `@Route`, providing its route type and any deeplinks. Use `@GlobalScope` or `@Scope` to make them available to other modules.
 
-**Example 1: Simple screen**
+**Example 1: Simple screen in the global graph**
 
 ```kotlin
 @Composable
-@NavigationEntry(route = HomeRoute::class, deeplinks = ["/home"])
+@Route(HomeRoute::class)
+@Deeplink("/home")
+@GlobalScope
 fun HomeScreen() {
     val navigation = LocalNavigationController.current
 
@@ -226,29 +279,23 @@ fun HomeScreen() {
     }) {
         Text("Go to details via route")
     }
-
-    Button(onClick = {
-        navigation.navigateTo("/details/42?title=The%20answer")
-    }) {
-        Text("Go to details via deeplink")
-    }
 }
 ```
 
-**Example 2: Screen with arguments**
-
-The processor automatically injects the route object as a parameter.
+**Example 2: Screen with arguments in a custom scope**
 
 ```kotlin
 @Composable
-@NavigationEntry(route = DetailsRoute::class, deeplinks = ["/details/{id}"])
+@Route(DetailsRoute::class)
+@Deeplink("/details/{id}")
+@Scope("settings")
 fun DetailsScreen(route: DetailsRoute) {
     val navigation = LocalNavigationController.current
 
     Text("ID from path: ${route.id}")
     route.title?.let { Text("Title from query: $it") }
 
-    Button(onClick = { navigation.navigateUp() }) {
+    Button(onClick = { navigation.safeNavigateUp() }) {
         Text("Back")
     }
 }
@@ -256,24 +303,28 @@ fun DetailsScreen(route: DetailsRoute) {
 
 ### 5. Set up the Navigation root
 
-In your main `App` composable, wrap your UI in the `Navigation` composable.
+In your main `App` composable, wrap your UI in the `Navigation` composable. Pass the appropriate generated registries to the `directionRegistries` parameter.
 
 ```kotlin
 import com.pedrobneto.easy.navigation.registry.GlobalDirectionRegistry // Generated
+import com.pedrobneto.easy.navigation.registry.SettingsDirectionRegistry // Generated
 
 @Composable
 fun App() {
     MaterialTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            // Remember the list of registries
-            val registries = remember { listOf(GlobalDirectionRegistry) }
+            // For the global graph
+            val globalRegistries = remember { listOf(GlobalDirectionRegistry) }
+            
+            // For a nested graph, you might use a different set of registries
+            val settingsRegistries = remember { listOf(SettingsDirectionRegistry) }
 
             Navigation(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
                 initialRoute = FirstScreenRoute,
-                directionRegistries = registries,
+                directionRegistries = globalRegistries,
             )
         }
     }
@@ -306,24 +357,40 @@ navigation.navigateTo(
 The library parses path parameters (`/details/{id}`), query parameters (`?title=...`), and constructs the `NavigationRoute` instance using `kotlinx.serialization`.
 
 ```kotlin
+// Using the safe API
+val navigated = navigation.safeNavigateTo("/details/123?title=Example")
+if (!navigated) {
+    // Handle error
+}
+
+// Using the unsafe API (will crash on error)
 navigation.navigateTo("/details/123?title=Example")
 ```
 
-**Navigate up:**
+**Navigating up:**
 
 Pops the top entry from the back stack.
 
-```kotlin
-val didNavigateUp = navigation.navigateUp()
-```
+*   Use `navigateUp()` if the failure to navigate up should crash (e.g., programmer error).
+    ```kotlin
+    // Throws an exception if it can't navigate up
+    navigation.navigateUp()
+    ```
+*   Use `safeNavigateUp()` to handle the failure case gracefully.
+    ```kotlin
+    val didNavigateUp = navigation.safeNavigateUp()
+    if (!didNavigateUp) {
+        // Handle the case where navigation up was not possible
+    }
+    ```
 
 **Pop up to a specific destination:**
 
 ```kotlin
-// Pops everything above HomeRoute
-navigation.popUpTo(direction = HomeRoute)
+// Pops everything above HomeRoute (safe version)
+val popped = navigation.safePopUpTo(direction = HomeRoute)
 
-// Pops everything including HomeRoute
+// Pops everything including HomeRoute (unsafe version)
 navigation.popUpTo(direction = HomeRoute, inclusive = true)
 ```
 
@@ -348,7 +415,7 @@ From the repository root:
 ```
 
 This will:
-- Build the `annotation`, `core`, and processor modules.
+- Build the `core` and processor modules.
 - Run KSP for the `sample` module, generating directions and registries.
 - Launch the Compose Desktop window titled **"Easy Navigation"**.
 
@@ -377,7 +444,7 @@ Useful Gradle commands from the repo root:
 At a high level, easy-navigation works by:
 
 1. Letting you define strongly-typed routes as Kotlin types.
-2. Letting you annotate composable functions with `@NavigationEntry` to declare destinations and deeplinks.
+2. Letting you annotate composable functions with `@Route`, `@Deeplink`, `@ParentRoute`, and `@Scope` to declare destinations and deeplinks.
 3. Generating navigation directions and registries at compile time via KSP.
 4. Providing a small runtime (`NavigationController` + `Navigation` composable) that:
    - Keeps a stateful back stack of routes.
