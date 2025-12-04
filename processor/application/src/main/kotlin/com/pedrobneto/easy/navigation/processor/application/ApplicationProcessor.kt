@@ -1,7 +1,5 @@
 package com.pedrobneto.easy.navigation.processor.application
 
-import br.com.arch.toolkit.lumber.DebugTree
-import br.com.arch.toolkit.lumber.Lumber
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
@@ -16,22 +14,15 @@ internal class ApplicationProcessor(private val environment: SymbolProcessorEnvi
 
     private var invoked = false
 
-    init {
-        Lumber.plant(DebugTree())
-    }
-
     @OptIn(KspExperimental::class)
-    override fun process(resolver: Resolver): List<KSAnnotated> = runCatching {
-        if (invoked) return@runCatching emptyList<KSAnnotated>()
+    override fun process(resolver: Resolver): List<KSAnnotated> {
+        if (invoked) return emptyList()
         invoked = true
 
-        val rootDir = environment.options["easy-navigation.rootDir"]?.let(::File)
-        if (rootDir == null) {
-            Lumber.tag("NavigationProcessor").error("Missing easy-navigation.rootDir option")
-            return@runCatching emptyList()
-        }
-
-        if (!rootDir.exists()) return@runCatching emptyList()
+        val rootDir = environment.options["easy-navigation.rootDir"]
+            ?.let(::File)
+            ?.takeIf(File::exists)
+            ?: error("easy-navigation.rootDir not set")
 
         val sourceSet = Regex("/src/(?<sourceSet>\\w+)/(kotlin|java)")
             .find(resolver.getAllFiles().first().filePath)
@@ -53,7 +44,7 @@ internal class ApplicationProcessor(private val environment: SymbolProcessorEnvi
 
         val shouldSkipSourceSet = (shouldOnlyGenerateCommonMain && sourceSet != "commonMain") ||
                 (!shouldOnlyGenerateCommonMain && sourceSet == "commonMain")
-        if (shouldSkipSourceSet) return@runCatching emptyList()
+        if (shouldSkipSourceSet) return emptyList()
 
         val filesToProcess = allRegistryFiles.filter {
             it.path.matches(Regex(".+build/generated/ksp/[^/]+/(commonMain|$sourceSet)/.+"))
@@ -65,6 +56,10 @@ internal class ApplicationProcessor(private val environment: SymbolProcessorEnvi
 
                 lines.forEach { line ->
                     when {
+                        line.matches(Regex("^@Scope\\(\"([^\"]+)\"\\)")) -> {
+                            return@mapNotNull null
+                        }
+
                         line.matches(Regex("^package (.*)$")) -> {
                             filePackage = line.removePrefix("package ")
                         }
@@ -85,19 +80,11 @@ internal class ApplicationProcessor(private val environment: SymbolProcessorEnvi
             .sorted()
             .toList()
 
-        if (registriesFromFiles.isEmpty()) {
-            Lumber.tag("ApplicationProcessor")
-                .warn("No registries discovered from generated sources")
-        }
-
         environment.codeGenerator.createGlobalRegistryFile(
             packageName = navigationClassPackage,
             registries = registriesFromFiles,
         )
 
-        emptyList()
-    }.getOrElse { exception ->
-        Lumber.tag("NavigationProcessor").error(exception, "Error while processing")
-        emptyList()
+        return emptyList()
     }
 }

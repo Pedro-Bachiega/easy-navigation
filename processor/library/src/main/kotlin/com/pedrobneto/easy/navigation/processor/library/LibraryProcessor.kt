@@ -1,18 +1,12 @@
 package com.pedrobneto.easy.navigation.processor.library
 
-import br.com.arch.toolkit.lumber.DebugTree
-import br.com.arch.toolkit.lumber.Lumber
 import com.google.devtools.ksp.KspExperimental
-import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSAnnotated
-import com.google.devtools.ksp.symbol.KSFunctionDeclaration
-import com.pedrobneto.easy.navigation.core.annotation.NavigationEntry
-import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.processor.library.model.Direction
 import java.util.Locale
-import kotlin.reflect.KClass
 
 internal class LibraryProcessor(private val environment: SymbolProcessorEnvironment) :
     SymbolProcessor {
@@ -21,103 +15,50 @@ internal class LibraryProcessor(private val environment: SymbolProcessorEnvironm
 
     private var invoked = false
 
-    init {
-        Lumber.plant(DebugTree())
-    }
-
     @OptIn(KspExperimental::class)
-    override fun process(resolver: Resolver): List<KSAnnotated> = runCatching {
+    override fun process(resolver: Resolver): List<KSAnnotated> {
         if (invoked) return emptyList()
         invoked = true
 
         val isMultiplatformWithSingleTarget =
             environment.options["isMultiplatformWithSingleTarget"]?.toBooleanStrictOrNull() == true
         val moduleName = resolver.getModuleName().getShortName()
-        val commonMainModuleName = "commonMain"
 
-        val symbolList = resolver
-            .getSymbolsWithAnnotation(annotationName = NavigationEntry::class.qualifiedName!!)
-            .filterIsInstance<KSFunctionDeclaration>()
-            .toList()
+        val symbols = resolver.findSymbols()
+        if (symbols.isEmpty()) return emptyList()
 
-        val resultList = symbolList.mapNotNull { function ->
-            val ksFile = function.containingFile ?: return@mapNotNull null
-            val fileInCommonMainPath = ksFile.filePath.contains(commonMainModuleName)
-            val moduleNameContainsCommonMain = moduleName.contains(commonMainModuleName)
-            val isNotInCommonMain = (moduleNameContainsCommonMain && !fileInCommonMainPath) ||
-                    (!moduleNameContainsCommonMain && fileInCommonMainPath)
+        val directionList = resolver.findSymbols().mapNotNull { function ->
+            environment.codeGenerator.process(function, moduleName, isMultiplatformWithSingleTarget)
+        }
 
-            val shouldSkip = !isMultiplatformWithSingleTarget && isNotInCommonMain
-            if (shouldSkip) return@mapNotNull null
+        val directionListByScope = directionList.flatMap(Direction::scopes)
+            .associateWith { scope -> directionList.filter { scope in it.scopes } }
+        val globalDirections = directionList.filter { it.scopes.isEmpty() }
 
-            val annotation = function.getAnnotationsByType(NavigationEntry::class)
-                .firstOrNull()
-                ?: return@mapNotNull null
-
-            val routeQualifiedName =
-                annotation.qualifiedNameForRoute(NavigationEntry::route) ?: run {
-                    Lumber.tag("LibraryProcessor")
-                        .error("Route not found for function ${function.simpleName.asString()}")
-                    return@mapNotNull null
-                }
-
-            val parentRouteQualifiedName =
-                annotation.qualifiedNameForRoute(NavigationEntry::parentRoute)
-
-            val deeplinks = runCatching { annotation.deeplinks }.getOrDefault(emptyArray())
-
-            val routePackageName = routeQualifiedName.substringBeforeLast('.')
-            val routeClassName = routeQualifiedName.substringAfterLast('.')
-            val directionClassName = "${routeClassName}Direction"
-
-            val parentRoutePackageName = parentRouteQualifiedName?.substringBeforeLast('.')
-            val parentRouteClassName = parentRouteQualifiedName?.substringAfterLast('.')
-
-            val routeParameterName = function.parameters.firstOrNull {
-                it.type.resolve().declaration.qualifiedName?.asString() == routeQualifiedName
-            }?.name?.asString()
-
-            environment.codeGenerator.createDirectionFile(
-                ksFile = ksFile,
-                deeplinks = deeplinks,
-                directionClassName = directionClassName,
-                routePackageName = routePackageName,
-                routeClassName = routeClassName,
-                parentRoutePackageName = parentRoutePackageName,
-                parentRouteClassName = parentRouteClassName,
-                functionPackageName = function.packageName.asString(),
-                functionName = function.simpleName.asString(),
-                routeParameterName = routeParameterName,
+        directionListByScope.forEach { (scope, directions) ->
+            environment.codeGenerator.createModuleRegistryFile(
+                scope = scope,
+                packageName = navigationClassPackage,
+                fileName = "${scope.capitalize(Locale.getDefault())}DirectionRegistry".trim(),
+                sources = directions.map(Direction::ksFile),
+                directions = directions.map(Direction::qualifiedDirectionName),
             )
         }
 
-        if (resultList.isNotEmpty()) {
+        if (globalDirections.isNotEmpty()) {
             environment.codeGenerator.createModuleRegistryFile(
                 packageName = navigationClassPackage,
                 fileName = "${normalizeModuleName(moduleName)}DirectionRegistry".trim(),
-                sources = resultList.map { it.first },
-                directions = resultList.map { it.second },
+                sources = globalDirections.map(Direction::ksFile),
+                directions = globalDirections.map(Direction::qualifiedDirectionName),
             )
         }
 
         return emptyList()
-    }.getOrElse { exception ->
-        Lumber.tag("LibraryProcessor").error(exception, "Error while processing")
-        emptyList()
     }
 
-    private fun normalizeModuleName(name: String) = name.replace("_([a-zA-Z]+)$".toRegex(), "")
-        .replace("[-_]([a-zA-Z])".toRegex()) { it.groupValues.last().uppercase() }
+    private fun normalizeModuleName(name: String) = name.replace(Regex("_([a-zA-Z]+)$"), "")
+        .replace(Regex("[-_]([a-zA-Z])")) { it.groupValues.last().uppercase() }
         .trimEnd('_')
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-
-    private fun NavigationEntry.qualifiedNameForRoute(
-        predicate: NavigationEntry.() -> KClass<*>
-    ): String? = runCatching { predicate().qualifiedName.orEmpty() }
-        .getOrElse { exception ->
-            Regex("(.*ClassNotFoundException: )([a-zA-Z._]+)")
-                .find(exception.message.orEmpty())
-                ?.groupValues
-                ?.last()
-        }.takeIf { it != NavigationRoute::class.qualifiedName }
 }

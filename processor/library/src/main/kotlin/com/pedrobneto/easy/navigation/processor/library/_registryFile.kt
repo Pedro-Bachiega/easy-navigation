@@ -5,20 +5,22 @@ import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.symbol.KSFile
 
 internal fun CodeGenerator.createModuleRegistryFile(
+    scope: String? = null,
     packageName: String,
     fileName: String,
     sources: List<KSFile>,
     directions: List<String>,
 ) {
-    val imports = listOf(
+    val imports = listOfNotNull(
         "com.pedrobneto.easy.navigation.core.model.DirectionRegistry",
+        scope?.let { "com.pedrobneto.easy.navigation.core.annotation.Scope" }
     ) + directions
 
     val template = """
 package $packageName
 
 ${imports.sorted().joinToString(separator = "\n") { "import $it" }}
-
+${scope?.let { "\n@Scope(\"$scope\")" }.orEmpty()}
 data object $fileName : DirectionRegistry(
     directions = listOf(
         ${

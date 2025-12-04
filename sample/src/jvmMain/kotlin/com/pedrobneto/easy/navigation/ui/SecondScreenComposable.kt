@@ -14,13 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.LocalNavigationController
-import com.pedrobneto.easy.navigation.core.annotation.NavigationEntry
+import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.model.FirstScreenRoute
 import com.pedrobneto.easy.navigation.model.SecondScreenRoute
 
 @Composable
-@NavigationEntry(route = SecondScreenRoute::class)
+@Route(SecondScreenRoute::class)
 internal fun SecondScreenComposable(
     modifier: Modifier = Modifier,
     secondScreenRoute: SecondScreenRoute

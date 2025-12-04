@@ -16,20 +16,21 @@ import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.LocalNavigationController
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.Route
-import com.pedrobneto.easy.navigation.model.FirstScreenRoute
-import com.pedrobneto.easy.navigation.model.SecondScreenRoute
+import com.pedrobneto.easy.navigation.core.annotation.Scope
+import com.pedrobneto.easy.navigation.model.FirstScopedRoute
+import com.pedrobneto.easy.navigation.model.SecondScopedRoute
 
 @Composable
-@Deeplink("/first")
-@Route(FirstScreenRoute::class)
-internal fun FirstScreenComposable(modifier: Modifier = Modifier) = Column(
+@Scope("SampleScope")
+@Route(FirstScopedRoute::class)
+internal fun FirstScopedComposable(modifier: Modifier = Modifier) = Column(
     modifier = modifier.fillMaxSize().padding(16.dp),
     horizontalAlignment = Alignment.CenterHorizontally
 ) {
     val navigation = LocalNavigationController.current
 
     Spacer(modifier = Modifier.weight(1f))
-    Text(text = "First Screen")
+    Text(text = "First Scoped Composable")
     Spacer(modifier = Modifier.weight(1f))
     Row(
         modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
@@ -37,18 +38,43 @@ internal fun FirstScreenComposable(modifier: Modifier = Modifier) = Column(
     ) {
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.navigateTo(SecondScreenRoute(title = "Second Screen title")) },
+            onClick = { navigation.navigateTo(SecondScopedRoute) },
             content = { Text("Next using Route") }
         )
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.navigateTo("/third?title=Third screen title&description=Third screen description") },
-            content = { Text("Third screen using Deeplink") }
+            onClick = { navigation.navigateTo("/second/scoped") },
+            content = { Text("Next using Deeplink") }
+        )
+    }
+}
+
+@Composable
+@Deeplink("/second/scoped")
+@Scope("SampleScope")
+@Route(SecondScopedRoute::class)
+internal fun SecondScopedComposable(modifier: Modifier = Modifier) = Column(
+    modifier = modifier.fillMaxSize().padding(16.dp),
+    horizontalAlignment = Alignment.CenterHorizontally
+) {
+    val navigation = LocalNavigationController.current
+
+    Spacer(modifier = Modifier.weight(1f))
+    Text(text = "Second Scoped Composable")
+    Spacer(modifier = Modifier.weight(1f))
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Button(
+            modifier = Modifier.weight(1f),
+            onClick = { navigation.navigateUp() },
+            content = { Text("Back using navigateUp") }
         )
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.navigateTo("/fourth/Some cool value?title=Fourth screen title&description=Fourth screen description") },
-            content = { Text("Fourth screen using Deeplink") }
+            onClick = { navigation.popUpTo(FirstScopedRoute) },
+            content = { Text("Back using pop") }
         )
     }
 }

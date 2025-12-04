@@ -15,9 +15,9 @@ import kotlin.reflect.KClass
  * is called, this will be the route to navigate to. If `null`, nothing happens.
  */
 abstract class NavigationDirection(
-    val deeplinks: List<NavigationDeeplink>,
     val routeClass: KClass<out NavigationRoute>,
-    val parentRouteClass: KClass<out NavigationRoute>? = null
+    val parentRouteClass: KClass<out NavigationRoute>? = null,
+    val deeplinks: List<NavigationDeeplink> = emptyList(),
 ) {
     /**
      * Draws the composable content for the given [route].

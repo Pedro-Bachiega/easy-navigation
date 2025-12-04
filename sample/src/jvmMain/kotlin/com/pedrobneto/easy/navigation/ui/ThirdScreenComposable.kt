@@ -14,13 +14,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.LocalNavigationController
-import com.pedrobneto.easy.navigation.core.annotation.NavigationEntry
+import com.pedrobneto.easy.navigation.core.annotation.Deeplink
+import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.model.SecondScreenRoute
 import com.pedrobneto.easy.navigation.model.ThirdScreenRoute
 
 @Composable
-@NavigationEntry(route = ThirdScreenRoute::class, deeplinks = ["/third"])
+@Deeplink("/third")
+@Route(ThirdScreenRoute::class)
 internal fun ThirdScreenComposable(
     modifier: Modifier = Modifier,
     thirdScreenRoute: ThirdScreenRoute

@@ -8,28 +8,32 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.pedrobneto.easy.navigation.core.Navigation
-import com.pedrobneto.easy.navigation.model.FirstScreenRoute
-import com.pedrobneto.easy.navigation.registry.GlobalDirectionRegistry
-import com.pedrobneto.easy.navigation.registry.SampleDirectionRegistry
+import com.pedrobneto.easy.navigation.model.FirstScopedRoute
+import com.pedrobneto.easy.navigation.registry.SampleScopeDirectionRegistry
 
 @Composable
 internal fun App() {
     MaterialTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            // Generated per module using module processor plugin
-            val contextualRegistries = remember {
-                listOf(SampleDirectionRegistry)
+            // Generated per scope using @Scope annotation
+            val (initialRoute, registries) = remember {
+                FirstScopedRoute to listOf(SampleScopeDirectionRegistry)
             }
 
-            // Generated aggregating all modules' registries using application processor plugin
-            val globalRegistry = remember {
-                listOf(GlobalDirectionRegistry)
-            }
+            // Generated per module using library gradle plugin
+//            val (initialRoute, registries) = remember {
+//                FirstScreenRoute to listOf(SampleDirectionRegistry)
+//            }
+
+            // Generated aggregating all modules' registries using application gradle plugin
+//            val (initialRoute, registries) = remember {
+//                FirstScreenRoute to listOf(GlobalDirectionRegistry)
+//            }
 
             Navigation(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
-                initialRoute = FirstScreenRoute,
-                directionRegistries = globalRegistry
+                initialRoute = initialRoute,
+                directionRegistries = registries
             )
         }
     }
