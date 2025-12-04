@@ -160,7 +160,7 @@ class NavigationControllerTest {
     }
 
     @Test
-    fun `navigateTo with SingleTop(clearTop=true) brings existing entry to top`() {
+    fun `navigateTo with SingleTop with clearTop=true brings existing entry to top`() {
         controller.navigateTo(TestDetailsRoute(1))
         controller.navigateTo(TestSettingsRoute)
         controller.navigateTo(TestDetailsRoute(2), LaunchStrategy.SingleTop(clearTop = true))

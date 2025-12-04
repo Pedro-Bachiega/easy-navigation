@@ -44,7 +44,7 @@ class NavigationDeeplinkTest {
 
     // region Property Tests
     @Test
-    fun `parses deeplink with scheme, host, path, and query params`() {
+    fun `parses deeplink with scheme host path and query params`() {
         val deeplink = NavigationDeeplink("nav://host/path/123?q1=v1&q2=v2")
 
         assertEquals("nav", deeplink.scheme)
