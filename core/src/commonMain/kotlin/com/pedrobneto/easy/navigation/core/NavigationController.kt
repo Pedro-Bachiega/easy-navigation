@@ -181,8 +181,9 @@ class NavigationController internal constructor(
     @Throws(IllegalArgumentException::class, IllegalStateException::class)
     fun popUpTo(routeClass: KClass<out NavigationRoute>, inclusive: Boolean = false) {
         if (backStack.none { it::class == routeClass }) {
-            Lumber.tag("NavigationController").error("No route found in back stack for $routeClass")
-            throw IllegalArgumentException("No route found in back stack for $routeClass")
+            val message = "No route found in back stack for $routeClass"
+            Lumber.tag("NavigationController").error(message)
+            throw IllegalArgumentException(message)
         }
         popUpTo(backStack.indexOfLast { it::class == routeClass }, inclusive)
     }
@@ -202,34 +203,50 @@ class NavigationController internal constructor(
 
     @Throws(IllegalStateException::class)
     private fun popUpTo(targetRouteIndex: Int, inclusive: Boolean = false) {
+        val parentDeeplink = currentDirection.parentDeeplink
         val parentRouteClass = currentDirection.parentRouteClass
+        val hasParent = parentDeeplink != null || parentRouteClass != null
 
         val actualFirstRemovedIndex = if (inclusive) targetRouteIndex else targetRouteIndex + 1
         val isPoppingRoot = actualFirstRemovedIndex <= 0
-        val shouldClose = isPoppingRoot && parentRouteClass == null
-        val shouldTryNavigatingToParent = isPoppingRoot && parentRouteClass != null
+        val shouldClose = isPoppingRoot && !hasParent
+        val shouldTryNavigatingToParent = isPoppingRoot && hasParent
 
         when {
             shouldClose -> {
                 // TODO Close navigation when root popped
-                Lumber.tag("NavigationController").error("Cannot pop root destination.")
-                throw IllegalStateException("Cannot pop root destination.")
+                val message = "Cannot pop root destination."
+                Lumber.tag("NavigationController").error(message)
+                throw IllegalStateException(message)
             }
 
             shouldTryNavigatingToParent -> {
                 runCatching {
-                    val route = json.decodeFromString(parentRouteClass.serializer(), "{}")
-                    navigateTo(route = route, strategy = LaunchStrategy.NewStack)
+                    val route = parentDeeplink?.resolve(json, directions)
+                        ?: parentRouteClass?.serializer()?.let {
+                            json.decodeFromString(it, "{}")
+                        }
+
+                    when {
+                        route == null && parentRouteClass != null -> {
+                            error(
+                                "Parent route should either have a constructor with" +
+                                        " 0 parameters or all parameters should have default values."
+                            )
+                        }
+
+                        route == null && parentDeeplink != null -> {
+                            error("Could not resolve deeplink for parent $parentDeeplink")
+                        }
+
+                        route != null -> {
+                            navigateTo(route = route, strategy = LaunchStrategy.NewStack)
+                        }
+                    }
                 }.getOrElse { exception ->
-                    Lumber.tag("NavigationController")
-                        .error(
-                            exception,
-                            "Parent route should either have a constructor with 0 parameters or all parameters should have default values."
-                        )
-                    throw IllegalArgumentException(
-                        "Parent route should either have a constructor with 0 parameters or all parameters should have default values.",
-                        exception
-                    )
+                    val message = "Could not decode route for parent"
+                    Lumber.tag("NavigationController").error(exception, message)
+                    throw IllegalArgumentException(message, exception)
                 }
             }
 

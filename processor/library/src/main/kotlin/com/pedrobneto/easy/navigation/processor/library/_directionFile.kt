@@ -7,6 +7,7 @@ import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.GlobalScope
+import com.pedrobneto.easy.navigation.core.annotation.ParentDeeplink
 import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.annotation.Scope
@@ -51,6 +52,10 @@ internal fun CodeGenerator.createDirection(
         .map(Deeplink::value)
         .toList()
 
+    val parentDeeplink = function.getAnnotationsByType(ParentDeeplink::class)
+        .firstOrNull()
+        ?.value
+
     val scopes = function.getAnnotationsByType(Scope::class)
         .map(Scope::value)
         .toList()
@@ -79,6 +84,7 @@ internal fun CodeGenerator.createDirection(
         routeClassName = routeClassName,
         parentRoutePackageName = parentRoutePackageName,
         parentRouteClassName = parentRouteClassName,
+        parentDeeplink = parentDeeplink,
         functionPackageName = function.packageName.asString(),
         functionName = function.simpleName.asString(),
         routeParameterName = routeParameterName,
@@ -99,8 +105,10 @@ private fun Direction.createDirectionFile(generator: CodeGenerator) {
 
     val imports = listOfNotNull(
         "androidx.compose.runtime.Composable",
-        "com.pedrobneto.easy.navigation.core.annotation.GlobalScope".takeIf { isGlobal },
-        "com.pedrobneto.easy.navigation.core.model.NavigationDeeplink".takeIf { deeplinks.isNotEmpty() },
+        "com.pedrobneto.easy.navigation.core.annotation.GlobalScope"
+            .takeIf { isGlobal },
+        "com.pedrobneto.easy.navigation.core.model.NavigationDeeplink"
+            .takeIf { deeplinks.isNotEmpty() || parentDeeplink != null },
         "com.pedrobneto.easy.navigation.core.model.NavigationDirection",
         "com.pedrobneto.easy.navigation.core.model.NavigationRoute",
         "$functionPackageName.$functionName",
@@ -113,10 +121,15 @@ private fun Direction.createDirectionFile(generator: CodeGenerator) {
         "listOf(\n\t\t${deeplinks.joinToString(",\n\t\t") { "NavigationDeeplink(\"$it\")" }}\n\t)"
     }
 
+    val parentDeeplinkFormatted = parentDeeplink?.let {
+        "parentDeeplink = NavigationDeeplink(\"$it\")"
+    }
+
     val constructorParametersFormatted = listOfNotNull(
         "routeClass = $routeClassName::class",
         deeplinksFormatted,
-        parentRouteClassParameter
+        parentDeeplinkFormatted,
+        parentRouteClassParameter,
     ).joinToString(",\n\t")
 
     val template = """

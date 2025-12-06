@@ -17,6 +17,19 @@ import kotlin.reflect.KClass
 annotation class Deeplink(val value: String)
 
 /**
+ * Specifies a deeplink to navigate to when `navigateUp` is called from the root of a navigation graph.
+ *
+ * When a destination is the initial route in its navigation graph, calling `navigateUp` would typically
+ * have no effect within that graph. By annotating a destination with [ParentDeeplink], you define an
+ * explicit upward navigation target.
+ *
+ * @property value The deeplink of the parent [NavigationRoute] to navigate to.
+ */
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.FUNCTION)
+annotation class ParentDeeplink(val value: String)
+
+/**
  * Designates a composable function as a destination for a specific [NavigationRoute].
  *
  * The annotation processor uses this to link a route class to its corresponding UI content.
@@ -31,12 +44,8 @@ annotation class Route(val value: KClass<out NavigationRoute>)
  * Specifies a route to navigate to when `navigateUp` is called from the root of a navigation graph.
  *
  * When a destination is the initial route in its navigation graph, calling `navigateUp` would typically
- * have no effect within that graph. By annotating a destination with `ParentRoute`, you define an
- * explicit upward navigation target. This is useful for linking nested or related navigation graphs,
- * allowing a seamless "up" navigation from a child graph back to a parent graph.
- *
- * For example, if a feature is its own navigation graph and is launched from a main graph, the starting
- * destination of the feature graph can be annotated with a `ParentRoute` pointing to a destination in the main graph.
+ * have no effect within that graph. By annotating a destination with [ParentRoute], you define an
+ * explicit upward navigation target.
  *
  * @property value The [KClass] of the parent [NavigationRoute] to navigate to.
  */

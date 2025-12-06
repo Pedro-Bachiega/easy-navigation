@@ -31,9 +31,18 @@ class NavigationControllerTest {
         object :
             NavigationDirection(
                 deeplinks = emptyList(),
-                routeClass = TestHomeRouteWithParent::class,
+                routeClass = TestHomeRouteWithParentKClass::class,
                 parentRouteClass = TestHomeRoute::class
             ) {
+            @Composable
+            override fun Draw(route: NavigationRoute) {
+            }
+        },
+        object : NavigationDirection(
+            deeplinks = emptyList(),
+            routeClass = TestHomeRouteWithParentDeeplink::class,
+            parentDeeplink = NavigationDeeplink("/home")
+        ) {
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -56,13 +65,22 @@ class NavigationControllerTest {
         },
         object : NavigationDirection(
             deeplinks = emptyList(),
-            routeClass = TestHomeWithParameterizedParent::class,
+            routeClass = TestHomeWithParameterizedParentClass::class,
             parentRouteClass = TestDetailsRoute::class
         ) {
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
-        }
+        },
+        object : NavigationDirection(
+            deeplinks = emptyList(),
+            routeClass = TestHomeRouteWithUnresolvedParentDeeplink::class,
+            parentDeeplink = NavigationDeeplink("/unresolved/deeplink")
+        ) {
+            @Composable
+            override fun Draw(route: NavigationRoute) {
+            }
+        },
     )
 
     private val testRegistry = object : DirectionRegistry(testDirections) {}
@@ -107,8 +125,17 @@ class NavigationControllerTest {
     }
 
     @Test
-    fun `navigateUp navigates to parent route and clears back stack when on empty back stack and parent route was provided`() {
-        controller.navigateTo(TestHomeRouteWithParent, LaunchStrategy.NewStack)
+    fun `navigateUp navigates to parent route and clears back stack when on empty back stack and parent route kclass was provided`() {
+        controller.navigateTo(TestHomeRouteWithParentKClass, LaunchStrategy.NewStack)
+        assertEquals(1, controller.backStack.size)
+        controller.navigateUp()
+        assertEquals(1, controller.backStack.size)
+        assertEquals(TestHomeRoute, controller.backStack.last())
+    }
+
+    @Test
+    fun `navigateUp navigates to parent route and clears back stack when on empty back stack and parent route deeplink was provided`() {
+        controller.navigateTo(TestHomeRouteWithParentDeeplink, LaunchStrategy.NewStack)
         assertEquals(1, controller.backStack.size)
         controller.navigateUp()
         assertEquals(1, controller.backStack.size)
@@ -125,7 +152,16 @@ class NavigationControllerTest {
 
     @Test
     fun `navigateUp throws on empty back stack and parent route has parameters`() {
-        controller.navigateTo(TestHomeWithParameterizedParent, LaunchStrategy.NewStack)
+        controller.navigateTo(TestHomeWithParameterizedParentClass, LaunchStrategy.NewStack)
+        assertEquals(1, controller.backStack.size)
+        assertFailsWith<IllegalArgumentException> {
+            controller.navigateUp()
+        }
+    }
+
+    @Test
+    fun `navigateUp throws on empty back stack and parent deeplinks has no matches`() {
+        controller.navigateTo(TestHomeRouteWithUnresolvedParentDeeplink, LaunchStrategy.NewStack)
         assertEquals(1, controller.backStack.size)
         assertFailsWith<IllegalArgumentException> {
             controller.navigateUp()
@@ -337,10 +373,16 @@ class NavigationControllerTest {
     data object TestHomeRoute : NavigationRoute
 
     @Serializable
-    data object TestHomeRouteWithParent : NavigationRoute
+    data object TestHomeRouteWithParentKClass : NavigationRoute
 
     @Serializable
-    data object TestHomeWithParameterizedParent : NavigationRoute
+    data object TestHomeRouteWithParentDeeplink : NavigationRoute
+
+    @Serializable
+    data object TestHomeWithParameterizedParentClass : NavigationRoute
+
+    @Serializable
+    data object TestHomeRouteWithUnresolvedParentDeeplink : NavigationRoute
 
     @Serializable
     data class TestDetailsRoute(val id: Long) : NavigationRoute

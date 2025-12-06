@@ -17,6 +17,7 @@ import kotlin.reflect.KClass
 abstract class NavigationDirection(
     val deeplinks: List<NavigationDeeplink> = emptyList(),
     val routeClass: KClass<out NavigationRoute>,
+    val parentDeeplink: NavigationDeeplink? = null,
     val parentRouteClass: KClass<out NavigationRoute>? = null,
 ) {
     /**
