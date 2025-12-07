@@ -1,7 +1,6 @@
 package com.pedrobneto.easy.navigation.core.adaptive
 
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -43,7 +42,7 @@ private fun fullSlideIn(): ContentTransform =
             slideOutHorizontally { fullWidth -> -fullWidth }
 
 private fun extraFadeIn(): ContentTransform =
-    expandIn() togetherWith fadeOut(targetAlpha = 1f)
+    fadeIn(initialAlpha = 1f) togetherWith fadeOut(targetAlpha = 1f)
 
 private fun halfSlideOut(): ContentTransform =
     slideInHorizontally { fullWidth -> -fullWidth / 2 } togetherWith

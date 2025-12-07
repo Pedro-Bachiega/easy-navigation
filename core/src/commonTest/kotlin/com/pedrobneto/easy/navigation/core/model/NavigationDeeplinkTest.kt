@@ -1,11 +1,9 @@
 package com.pedrobneto.easy.navigation.core.model
 
 import androidx.compose.runtime.Composable
-import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
-import com.pedrobneto.easy.navigation.core.model.NavigationDirection
-import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -18,6 +16,8 @@ class NavigationDeeplinkTest {
             deeplinks = listOf(NavigationDeeplink("/home")),
             routeClass = TestHomeRoute::class
         ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -26,6 +26,8 @@ class NavigationDeeplinkTest {
             deeplinks = listOf(NavigationDeeplink("/details/{id}")),
             routeClass = TestDetailsRoute::class,
         ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -34,6 +36,8 @@ class NavigationDeeplinkTest {
             deeplinks = listOf(NavigationDeeplink("app://user/{userId}")),
             routeClass = TestUserRoute::class,
         ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }

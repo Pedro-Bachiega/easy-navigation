@@ -1,6 +1,8 @@
 package com.pedrobneto.easy.navigation.core.model
 
+import androidx.compose.runtime.mutableStateListOf
 import com.pedrobneto.easy.navigation.core.NavigationController
+import com.pedrobneto.easy.navigation.core.extension.removeRange
 
 /**
  * Defines how a navigation destination should be launched, affecting the back stack.

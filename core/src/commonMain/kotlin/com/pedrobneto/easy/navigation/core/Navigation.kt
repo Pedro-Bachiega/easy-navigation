@@ -48,9 +48,7 @@ fun Navigation(
     contentAlignment: Alignment = Alignment.TopStart,
     entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator()),
-    sceneStrategy: SceneStrategy<NavigationRoute> = AdaptiveSceneStrategy(
-        isUsingAdaptiveLayout = false
-    ),
+    sceneStrategy: SceneStrategy<NavigationRoute> = AdaptiveSceneStrategy(isUsingAdaptiveLayout = false),
     sizeTransform: SizeTransform? = null,
     transitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
         initialState transitionTo targetState
@@ -61,23 +59,21 @@ fun Navigation(
     predictivePopTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.(
         @NavigationEvent.SwipeEdge Int
     ) -> ContentTransform = defaultPredictivePopTransitionSpec(),
-) = CompositionLocalProvider(
-    LocalNavigationController provides NavigationController(
-        initialRoute = initialRoute,
-        directionRegistries = directionRegistries,
-    )
 ) {
-    val navigation = LocalNavigationController.current
-    NavDisplay(
-        modifier = modifier,
-        backStack = navigation.backStack,
-        entryProvider = navigation.directionProvider,
-        contentAlignment = contentAlignment,
-        entryDecorators = entryDecorators,
-        sceneStrategy = sceneStrategy,
-        sizeTransform = sizeTransform,
-        transitionSpec = transitionSpec,
-        popTransitionSpec = popTransitionSpec,
-        predictivePopTransitionSpec = predictivePopTransitionSpec,
-    )
+    val controller =
+        NavigationController(initialRoute = initialRoute, directionRegistries = directionRegistries)
+    CompositionLocalProvider(LocalNavigationController provides controller) {
+        NavDisplay(
+            modifier = modifier,
+            backStack = controller.backStack,
+            entryProvider = controller.directionProvider,
+            contentAlignment = contentAlignment,
+            entryDecorators = entryDecorators,
+            sceneStrategy = sceneStrategy,
+            sizeTransform = sizeTransform,
+            transitionSpec = transitionSpec,
+            popTransitionSpec = popTransitionSpec,
+            predictivePopTransitionSpec = predictivePopTransitionSpec,
+        )
+    }
 }

@@ -2,6 +2,7 @@ package com.pedrobneto.easy.navigation.core
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
+import androidx.navigation3.runtime.NavBackStack
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
@@ -9,6 +10,7 @@ import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,6 +26,8 @@ class NavigationControllerTest {
             deeplinks = listOf(NavigationDeeplink("/home")),
             routeClass = TestHomeRoute::class
         ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -34,6 +38,8 @@ class NavigationControllerTest {
                 routeClass = TestHomeRouteWithParentKClass::class,
                 parentRouteClass = TestHomeRoute::class
             ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -43,6 +49,8 @@ class NavigationControllerTest {
             routeClass = TestHomeRouteWithParentDeeplink::class,
             parentDeeplink = NavigationDeeplink("/home")
         ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -51,6 +59,8 @@ class NavigationControllerTest {
             deeplinks = listOf(NavigationDeeplink("/details/{id}")),
             routeClass = TestDetailsRoute::class,
         ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -59,6 +69,8 @@ class NavigationControllerTest {
             deeplinks = emptyList(),
             routeClass = TestSettingsRoute::class
         ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -68,6 +80,8 @@ class NavigationControllerTest {
             routeClass = TestHomeWithParameterizedParentClass::class,
             parentRouteClass = TestDetailsRoute::class
         ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -77,6 +91,8 @@ class NavigationControllerTest {
             routeClass = TestHomeRouteWithUnresolvedParentDeeplink::class,
             parentDeeplink = NavigationDeeplink("/unresolved/deeplink")
         ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
             @Composable
             override fun Draw(route: NavigationRoute) {
             }
@@ -90,7 +106,7 @@ class NavigationControllerTest {
     @BeforeTest
     fun setUp() {
         controller = NavigationController(
-            backStack = mutableStateListOf(TestHomeRoute),
+            backStack = NavBackStack(mutableStateListOf(TestHomeRoute)),
             directionRegistryList = listOf(testRegistry),
             json = Json { ignoreUnknownKeys = true }
         )
@@ -372,7 +388,10 @@ class NavigationControllerTest {
 
     @Test
     fun `currentDirection returns the direction for the current route`() {
-        assertEquals(testDirections.first { it.routeClass == TestHomeRoute::class }, controller.currentDirection)
+        assertEquals(
+            testDirections.first { it.routeClass == TestHomeRoute::class },
+            controller.currentDirection
+        )
     }
 
     @Test

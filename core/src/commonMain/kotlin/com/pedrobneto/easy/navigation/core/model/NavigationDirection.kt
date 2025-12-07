@@ -1,7 +1,10 @@
 package com.pedrobneto.easy.navigation.core.model
 
 import androidx.compose.runtime.Composable
+import androidx.navigation3.runtime.NavBackStack
+import androidx.savedstate.serialization.SavedStateConfiguration
 import com.pedrobneto.easy.navigation.core.adaptive.PaneStrategy
+import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import kotlin.reflect.KClass
 
 /**
@@ -34,6 +37,11 @@ abstract class NavigationDirection(
         METADATA_ROUTE_KEY to routeClass.qualifiedName.orEmpty(),
         METADATA_STRATEGY_KEY to paneStrategy,
     )
+
+    /**
+     * Registers the direction into the `serializersModule` of the [NavBackStack]'s [SavedStateConfiguration]
+     */
+    abstract fun register(builder: PolymorphicModuleBuilder<NavigationRoute>)
 
     /**
      * Draws the composable content for the given [route].

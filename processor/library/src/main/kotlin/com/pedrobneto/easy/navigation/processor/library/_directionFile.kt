@@ -145,7 +145,7 @@ private fun Direction.createDirectionFile(generator: CodeGenerator) {
         is PaneStrategy.Single -> "PaneStrategy.Single"
         is PaneStrategy.Extra -> {
             val hostListFormatted = paneStrategy.hosts.joinToString(separator = ",\n\t\t") {
-                "PaneStrategy.Extra.PaneHost(route = ${it.route.raw}::class, ratio = ${it.ratio}f)"
+                "PaneStrategy.Extra.PaneHost(route = ${it.route.className}::class, ratio = ${it.ratio}f)"
             }
             "PaneStrategy.Extra(" +
                     "\n\t\t$hostListFormatted," +
@@ -161,6 +161,7 @@ private fun Direction.createDirectionFile(generator: CodeGenerator) {
             .takeIf { deeplinks.isNotEmpty() || parentDeeplink != null },
         "com.pedrobneto.easy.navigation.core.model.NavigationDirection",
         "com.pedrobneto.easy.navigation.core.model.NavigationRoute",
+        "kotlinx.serialization.modules.PolymorphicModuleBuilder",
         "$functionPackageName.$functionName",
         parentRouteClassImport,
         *paneStrategyImports.toTypedArray()
@@ -192,6 +193,9 @@ ${"\n@GlobalScope".takeIf { isGlobal }.orEmpty()}
 internal data object $directionClassName : NavigationDirection(
     $constructorParametersFormatted
 ) {
+    override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) =
+        builder.subclass($routeClassName::class, $routeClassName.serializer())
+
     @Composable
     override fun Draw(route: NavigationRoute) {
         $functionName($parameter)

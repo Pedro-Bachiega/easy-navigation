@@ -4,15 +4,15 @@ package com.pedrobneto.easy.navigation.core
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
 import br.com.arch.toolkit.lumber.Lumber
 import com.pedrobneto.easy.navigation.core.annotation.SafeNavigationApi
 import com.pedrobneto.easy.navigation.core.annotation.UnsafeNavigationApi
+import com.pedrobneto.easy.navigation.core.extension.rememberNavBackStack
+import com.pedrobneto.easy.navigation.core.extension.removeRange
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
@@ -46,7 +46,7 @@ val LocalNavigationController: ProvidableCompositionLocal<NavigationController> 
  * @param json The [Json] instance used for deserializing route arguments.
  */
 class NavigationController internal constructor(
-    val backStack: SnapshotStateList<NavigationRoute>,
+    internal val backStack: NavBackStack<NavigationRoute>,
     private val directionRegistryList: List<DirectionRegistry>,
     private val json: Json,
 ) {
@@ -61,16 +61,15 @@ class NavigationController internal constructor(
      * Provides a [NavEntry] for a given [NavigationRoute], allowing the navigation framework
      * to render the correct composable for each route.
      */
-    internal val directionProvider: (NavigationRoute) -> NavEntry<NavigationRoute> =
-        entryProvider {
-            directions.map { direction ->
-                addEntryProvider(
-                    clazz = direction.routeClass,
-                    metadata = direction.metadata,
-                    content = direction::Draw
-                )
-            }
+    internal val directionProvider: (NavigationRoute) -> NavEntry<NavigationRoute> = entryProvider {
+        directions.map { direction ->
+            addEntryProvider(
+                clazz = direction.routeClass,
+                metadata = direction.metadata,
+                content = direction::Draw
+            )
         }
+    }
 
     /**
      * The current route in the navigation back stack.
@@ -272,7 +271,7 @@ class NavigationController internal constructor(
          *
          * @param initialRoute The initial route to be displayed when the navigation is first set up.
          * @param directionRegistries A list of [DirectionRegistry] instances containing all possible navigation directions.
-         * @param backStack An optional [SnapshotStateList] to be used as the back stack. If not provided,
+         * @param backStack An optional [NavBackStack] to be used as the back stack. If not provided,
          * a new one will be created with the [initialRoute].
          * @param json The [Json] instance used for deserializing route arguments.
          * @return A remembered [NavigationController] instance.
@@ -282,9 +281,10 @@ class NavigationController internal constructor(
         operator fun invoke(
             initialRoute: NavigationRoute,
             directionRegistries: List<DirectionRegistry>,
-            backStack: SnapshotStateList<NavigationRoute> = remember {
-                mutableStateListOf(initialRoute)
-            },
+            backStack: NavBackStack<NavigationRoute> = rememberNavBackStack(
+                initialRoute,
+                directionRegistries
+            ),
             json: Json = Json {
                 ignoreUnknownKeys = true
                 encodeDefaults = true

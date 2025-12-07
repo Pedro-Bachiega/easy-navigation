@@ -39,8 +39,8 @@ class AdaptiveSceneStrategy(
     private val NavEntry<NavigationRoute>.paneRouteQualifiedName: String?
         get() = metadata[NavigationDirection.METADATA_ROUTE_KEY] as? String
 
-    private val NavEntry<NavigationRoute>.paneStrategy: PaneStrategy
-        get() = metadata[NavigationDirection.METADATA_STRATEGY_KEY] as PaneStrategy
+    private val NavEntry<NavigationRoute>.paneStrategy: PaneStrategy?
+        get() = metadata[NavigationDirection.METADATA_STRATEGY_KEY] as? PaneStrategy
 
     override fun SceneStrategyScope<NavigationRoute>.calculateScene(
         entries: List<NavEntry<NavigationRoute>>
@@ -127,7 +127,7 @@ class AdaptiveSceneStrategy(
     class AdaptivePaneScene internal constructor(
         override val key: Any,
         override val previousEntries: List<NavEntry<NavigationRoute>>,
-        internal  val entry: NavEntry<NavigationRoute>,
+        internal val entry: NavEntry<NavigationRoute>,
         private val strategy: PaneStrategy.Adaptive,
         private val orientation: Orientation,
     ) : Scene<NavigationRoute> {
@@ -171,7 +171,7 @@ class AdaptiveSceneStrategy(
         override val key: Any,
         override val previousEntries: List<NavEntry<NavigationRoute>>,
         internal val currentEntry: NavEntry<NavigationRoute>,
-        internal  val previousEntry: NavEntry<NavigationRoute>,
+        internal val previousEntry: NavEntry<NavigationRoute>,
         private val entryRatio: Float,
         private val orientation: Orientation,
         private val divider: @Composable (
