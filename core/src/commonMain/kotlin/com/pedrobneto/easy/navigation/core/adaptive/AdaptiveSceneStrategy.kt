@@ -184,6 +184,10 @@ class AdaptiveSceneStrategy(
             (other is DualPaneScene && other.currentEntry == previousEntry) ||
                     (other is AdaptivePaneScene && other.entry == previousEntry)
 
+        fun isReplacingExtra(other: Scene<NavigationRoute>): Boolean = other is DualPaneScene &&
+                other.previousEntry == previousEntry &&
+                other.currentEntry != currentEntry
+
         override val entries: List<NavEntry<NavigationRoute>> =
             listOfNotNull(currentEntry, previousEntry)
 

@@ -35,7 +35,7 @@ private fun KSFunctionDeclaration.getPaneStrategy(logger: KSPLogger): PaneStrate
 
     val adaptivePane = getAnnotationsByType(AdaptivePane::class)
         .firstOrNull()
-        .let { PaneStrategy.Adaptive(ratio = it?.ratio ?: 1f) }
+        ?.let { PaneStrategy.Adaptive(ratio = it.ratio) }
 
     val foundList = listOfNotNull(extraPane, singlePane, adaptivePane)
     if (foundList.size > 1) {
@@ -47,7 +47,7 @@ private fun KSFunctionDeclaration.getPaneStrategy(logger: KSPLogger): PaneStrate
         return foundList.first()
     }
 
-    return extraPane ?: singlePane ?: adaptivePane
+    return extraPane ?: singlePane ?: adaptivePane ?: PaneStrategy.Adaptive()
 }
 
 internal fun CodeGenerator.createDirection(

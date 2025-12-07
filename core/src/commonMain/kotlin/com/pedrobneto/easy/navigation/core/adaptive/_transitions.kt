@@ -16,6 +16,7 @@ internal infix fun Scene<NavigationRoute>.transitionTo(target: Scene<NavigationR
 
     return when {
         currentIsAdaptivePane && targetIsDualPane && target.isAfter(this) -> extraFadeIn()
+        currentIsDualPane && targetIsDualPane && target.isReplacingExtra(this) -> none()
         currentIsDualPane && targetIsDualPane && target.isAfter(this) -> halfSlideIn()
         else -> fullSlideIn()
     }
@@ -41,8 +42,7 @@ private fun fullSlideIn(): ContentTransform =
     slideInHorizontally { fullWidth -> fullWidth } togetherWith
             slideOutHorizontally { fullWidth -> -fullWidth }
 
-private fun extraFadeIn(): ContentTransform =
-    fadeIn(initialAlpha = 1f) togetherWith fadeOut(targetAlpha = 1f)
+private fun extraFadeIn(): ContentTransform = none()
 
 private fun halfSlideOut(): ContentTransform =
     slideInHorizontally { fullWidth -> -fullWidth / 2 } togetherWith
@@ -52,5 +52,7 @@ private fun fullSlideOut(): ContentTransform =
     slideInHorizontally { fullWidth -> -fullWidth } togetherWith
             slideOutHorizontally { fullWidth -> fullWidth }
 
-private fun extraFadeOut(): ContentTransform =
+private fun extraFadeOut(): ContentTransform = none()
+
+private fun none(): ContentTransform =
     fadeIn(initialAlpha = 1f) togetherWith fadeOut(targetAlpha = 1f)
