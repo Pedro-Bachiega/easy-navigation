@@ -1,4 +1,4 @@
-package com.pedrobneto.easy.navigation.ui
+package com.pedrobneto.easy.navigation.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,15 +14,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.LocalNavigationController
+import com.pedrobneto.easy.navigation.core.adaptive.AdaptivePane
+import com.pedrobneto.easy.navigation.core.adaptive.ExtraPane
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.ParentDeeplink
-import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
-import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.model.SecondScreenRoute
 import com.pedrobneto.easy.navigation.model.ThirdScreenRoute
 
 @Composable
+@ExtraPane(SecondScreenRoute::class, 0.5f)
 @Deeplink("/third")
 @Route(ThirdScreenRoute::class)
 @ParentDeeplink("/second?title=Used navigateUp with @ParentDeeplink")

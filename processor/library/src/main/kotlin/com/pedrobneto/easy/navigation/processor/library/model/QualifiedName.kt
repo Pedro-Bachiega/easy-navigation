@@ -18,5 +18,17 @@ value class QualifiedName(val raw: String) {
                         ?.last()
                 }.takeIf { it != NavigationRoute::class.qualifiedName }
                 ?.let(::QualifiedName)
+
+        operator fun invoke(kClasses: () -> Array<out KClass<*>>): List<QualifiedName> =
+            kClasses().mapNotNull {
+                runCatching { it.qualifiedName.orEmpty() }
+                    .getOrElse { exception ->
+                        "(.*ClassNotFoundException: )([a-zA-Z._]+)".toRegex()
+                            .find(exception.message.orEmpty())
+                            ?.groupValues
+                            ?.last()
+                    }.takeIf { it != NavigationRoute::class.qualifiedName }
+                    ?.let(::QualifiedName)
+            }
     }
 }

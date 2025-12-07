@@ -1,4 +1,4 @@
-package com.pedrobneto.easy.navigation.ui
+package com.pedrobneto.easy.navigation.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

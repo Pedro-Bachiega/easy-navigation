@@ -13,13 +13,17 @@ kotlin {
         val commonMain by getting
         commonMain.dependencies {
             implementation(compose.desktop.currentOs)
-            implementation(compose.foundation)
-            implementation(compose.material)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.material3)
-            implementation(compose.material3AdaptiveNavigationSuite)
 
-            implementation(compose.uiTooling)
+            implementation(libs.jetbrains.compose.foundation)
+            implementation(libs.jetbrains.compose.material.core)
+            implementation(libs.jetbrains.compose.material.icons.core)
+            implementation(libs.jetbrains.compose.material.icons.extended)
+            implementation(libs.jetbrains.compose.material3.core)
+            implementation(libs.jetbrains.compose.material3.adaptive.core)
+            implementation(libs.jetbrains.compose.material3.adaptive.navigation.suite)
+            implementation(libs.jetbrains.compose.material3.window)
+            implementation(libs.jetbrains.compose.navigation3.ui)
+            implementation(libs.jetbrains.compose.ui.tooling)
 
             implementation(libs.toolkit.arch.lumber)
 

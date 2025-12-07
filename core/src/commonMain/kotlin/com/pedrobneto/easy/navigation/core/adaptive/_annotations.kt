@@ -28,6 +28,7 @@ annotation class AdaptivePane(val ratio: Float = 1f)
  * @property ratio The fraction of the available width that this extra pane should occupy.
  * The host pane will occupy the remaining `1f - ratio`. Defaults to `0.5f`.
  */
+@Repeatable
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
 annotation class ExtraPane(val host: KClass<out NavigationRoute>, val ratio: Float = 0.5f)

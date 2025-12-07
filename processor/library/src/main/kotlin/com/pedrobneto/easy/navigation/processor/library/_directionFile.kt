@@ -8,6 +8,7 @@ import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.pedrobneto.easy.navigation.core.adaptive.AdaptivePane
 import com.pedrobneto.easy.navigation.core.adaptive.ExtraPane
 import com.pedrobneto.easy.navigation.core.adaptive.SinglePane
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
@@ -21,28 +22,32 @@ import com.pedrobneto.easy.navigation.processor.library.model.PaneStrategy
 import com.pedrobneto.easy.navigation.processor.library.model.QualifiedName
 
 private fun KSFunctionDeclaration.getPaneStrategy(logger: KSPLogger): PaneStrategy {
-    val extraPane = getAnnotationsByType(ExtraPane::class)
-        .firstOrNull()
-        ?.let {
-            val qualifiedName = QualifiedName(it::host) ?: return@let null
-            PaneStrategy.Extra(host = qualifiedName, ratio = it.ratio)
-        }
+    val extraPaneHosts = getAnnotationsByType(ExtraPane::class).mapNotNull {
+        val qualifiedName = QualifiedName(it::host) ?: return@mapNotNull null
+        PaneStrategy.Extra.PaneHost(route = qualifiedName, ratio = it.ratio)
+    }.toList()
+    val extraPane = PaneStrategy.Extra(hosts = extraPaneHosts)
+        .takeIf { extraPaneHosts.isNotEmpty() }
 
     val singlePane = getAnnotationsByType(SinglePane::class)
         .firstOrNull()
         ?.let { PaneStrategy.Single }
 
-    val foundList = listOfNotNull(extraPane, singlePane)
+    val adaptivePane = getAnnotationsByType(AdaptivePane::class)
+        .firstOrNull()
+        .let { PaneStrategy.Adaptive(ratio = it?.ratio ?: 1f) }
+
+    val foundList = listOfNotNull(extraPane, singlePane, adaptivePane)
     if (foundList.size > 1) {
         logger.warn(
-            "Multiple panel strategies found for function ${this.simpleName.asString()}. " +
+            "Multiple pane strategies found for function ${this.simpleName.asString()}. " +
                     "Using ${foundList.first().javaClass.simpleName}.",
             this
         )
         return foundList.first()
     }
 
-    return extraPane ?: singlePane ?: PaneStrategy.Adaptive()
+    return extraPane ?: singlePane ?: adaptivePane
 }
 
 internal fun CodeGenerator.createDirection(
@@ -129,7 +134,7 @@ private fun Direction.createDirectionFile(generator: CodeGenerator) {
     val paneStrategyImports =
         mutableListOf("com.pedrobneto.easy.navigation.core.adaptive.PaneStrategy")
     if (paneStrategy is PaneStrategy.Extra) {
-        paneStrategyImports.add(paneStrategy.host.raw)
+        paneStrategyImports.addAll(paneStrategy.hosts.map { it.route.raw })
     }
 
     val paneStrategyFormatted = "paneStrategy = " + when (paneStrategy) {
@@ -138,10 +143,14 @@ private fun Direction.createDirectionFile(generator: CodeGenerator) {
                 "\n\t)"
 
         is PaneStrategy.Single -> "PaneStrategy.Single"
-        is PaneStrategy.Extra -> "PaneStrategy.Extra(" +
-                "\n\t\thost = ${paneStrategy.host.className}::class," +
-                "\n\t\tratio = ${paneStrategy.ratio}f" +
-                "\n\t)"
+        is PaneStrategy.Extra -> {
+            val hostListFormatted = paneStrategy.hosts.joinToString(separator = ",\n\t\t") {
+                "PaneStrategy.Extra.PaneHost(route = ${it.route.raw}::class, ratio = ${it.ratio}f)"
+            }
+            "PaneStrategy.Extra(" +
+                    "\n\t\t$hostListFormatted," +
+                    "\n\t)"
+        }
     }
 
     val imports = listOfNotNull(

@@ -3,9 +3,6 @@ package com.pedrobneto.easy.navigation.core
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -18,6 +15,8 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
 import androidx.navigationevent.NavigationEvent
 import com.pedrobneto.easy.navigation.core.adaptive.AdaptiveSceneStrategy
+import com.pedrobneto.easy.navigation.core.adaptive.popTo
+import com.pedrobneto.easy.navigation.core.adaptive.transitionTo
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.test.KoverExcludes
@@ -49,15 +48,15 @@ fun Navigation(
     contentAlignment: Alignment = Alignment.TopStart,
     entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator()),
-    sceneStrategy: SceneStrategy<NavigationRoute> = AdaptiveSceneStrategy(),
+    sceneStrategy: SceneStrategy<NavigationRoute> = AdaptiveSceneStrategy(
+        isUsingAdaptiveLayout = false
+    ),
     sizeTransform: SizeTransform? = null,
     transitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
-        slideInHorizontally { fullWidth -> fullWidth } togetherWith
-                slideOutHorizontally { fullWidth -> -fullWidth }
+        initialState transitionTo targetState
     },
     popTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
-        slideInHorizontally { fullWidth -> -fullWidth } togetherWith
-                slideOutHorizontally { fullWidth -> fullWidth }
+        initialState popTo targetState
     },
     predictivePopTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.(
         @NavigationEvent.SwipeEdge Int

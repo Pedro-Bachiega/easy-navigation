@@ -30,7 +30,10 @@ abstract class NavigationDirection(
     val parentRouteClass: KClass<out NavigationRoute>? = null,
     val paneStrategy: PaneStrategy = PaneStrategy.Adaptive()
 ) {
-    internal val metadata: Map<String, Any> = mapOf(METADATA_STRATEGY_KEY to paneStrategy)
+    internal val metadata: Map<String, Any> = mapOf(
+        METADATA_ROUTE_KEY to routeClass.qualifiedName.orEmpty(),
+        METADATA_STRATEGY_KEY to paneStrategy,
+    )
 
     /**
      * Draws the composable content for the given [route].
@@ -41,6 +44,7 @@ abstract class NavigationDirection(
     abstract fun Draw(route: NavigationRoute)
 
     internal companion object {
+        const val METADATA_ROUTE_KEY = "route"
         const val METADATA_STRATEGY_KEY = "strategy"
     }
 }

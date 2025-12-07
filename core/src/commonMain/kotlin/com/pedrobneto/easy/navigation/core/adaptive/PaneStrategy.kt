@@ -1,5 +1,6 @@
 package com.pedrobneto.easy.navigation.core.adaptive
 
+import androidx.annotation.FloatRange
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
@@ -14,7 +15,10 @@ sealed class PaneStrategy {
      * following the configuration set in the `NavHost`.
      */
     @Serializable
-    data class Adaptive(val ratio: Float = 1f) : PaneStrategy()
+    data class Adaptive(
+        @param:FloatRange(from = .1, to = 1.0)
+        val ratio: Float = 1f
+    ) : PaneStrategy()
 
     /**
      * The content will always be displayed in a single pane, regardless of the `NavHost` configuration.
@@ -25,9 +29,23 @@ sealed class PaneStrategy {
     /**
      * The content will be displayed in an extra pane, alongside the primary one.
      *
-     * @property host The host navigation route that will display the extra pane.
-     * @property ratio The ratio of the screen that the extra pane will occupy.
+     * @property hosts The hosts this pane can be attached to with their corresponding ratio.
      */
     @Serializable
-    data class Extra(val host: KClass<out NavigationRoute>, val ratio: Float = 0.5f) : PaneStrategy()
+    data class Extra(val hosts: List<PaneHost>) : PaneStrategy() {
+        constructor(vararg hosts: PaneHost) : this(hosts = hosts.toList())
+
+        /**
+         * The host this pane can be attached to.
+         *
+         * @property route The `route` this pane can be attached to.
+         * @property ratio The ratio of the screen that the extra pane will occupy.
+         */
+        @Serializable
+        data class PaneHost(
+            val route: KClass<out NavigationRoute>,
+            @param:FloatRange(from = .1, to = .9)
+            val ratio: Float = 0.5f
+        )
+    }
 }

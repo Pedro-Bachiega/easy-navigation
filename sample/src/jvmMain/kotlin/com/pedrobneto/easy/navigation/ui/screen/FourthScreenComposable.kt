@@ -1,4 +1,4 @@
-package com.pedrobneto.easy.navigation.ui
+package com.pedrobneto.easy.navigation.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,19 +14,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.LocalNavigationController
+import com.pedrobneto.easy.navigation.core.adaptive.ExtraPane
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
-import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
+import com.pedrobneto.easy.navigation.core.annotation.ParentDeeplink
 import com.pedrobneto.easy.navigation.core.annotation.Route
-import com.pedrobneto.easy.navigation.model.FirstScreenRoute
-import com.pedrobneto.easy.navigation.model.SecondScreenRoute
+import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
+import com.pedrobneto.easy.navigation.model.FourthScreenRoute
+import com.pedrobneto.easy.navigation.model.ThirdScreenRoute
 
 @Composable
-@Deeplink("/second")
-@Route(SecondScreenRoute::class)
-@ParentRoute(FirstScreenRoute::class)
-internal fun SecondScreenComposable(
+@Deeplink("/fourth/{pathVariable}")
+@ExtraPane(ThirdScreenRoute::class, ratio = 0.5f)
+@Route(FourthScreenRoute::class)
+@ParentDeeplink("/third?title=Used navigateUp with @ParentDeeplink&description=Used navigateUp with @ParentDeeplink")
+internal fun FourthScreenComposable(
     modifier: Modifier = Modifier,
-    secondScreenRoute: SecondScreenRoute
+    fourthScreenRoute: FourthScreenRoute
 ) = Column(
     modifier = modifier.fillMaxSize().padding(16.dp),
     horizontalAlignment = Alignment.CenterHorizontally
@@ -34,7 +37,9 @@ internal fun SecondScreenComposable(
     val navigation = LocalNavigationController.current
 
     Spacer(modifier = Modifier.weight(1f))
-    Text(text = secondScreenRoute.title)
+    Text(text = "Title: ${fourthScreenRoute.title}")
+    Text(text = "Description: ${fourthScreenRoute.description}")
+    Text(text = "Path Variable: ${fourthScreenRoute.pathVariable}")
     Spacer(modifier = Modifier.weight(1f))
     Row(
         modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
@@ -47,8 +52,10 @@ internal fun SecondScreenComposable(
         )
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.navigateTo("/third?title=Third screen using deeplink&description=Some cool description") },
-            content = { Text("Next using Deeplink") }
+            onClick = {
+                navigation.navigateTo(deeplink = "/first", strategy = LaunchStrategy.NewStack)
+            },
+            content = { Text("Back using Deeplink") }
         )
     }
 }
