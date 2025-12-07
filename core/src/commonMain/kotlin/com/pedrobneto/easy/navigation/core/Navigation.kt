@@ -14,10 +14,10 @@ import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
-import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
 import androidx.navigationevent.NavigationEvent
+import com.pedrobneto.easy.navigation.core.adaptive.AdaptiveSceneStrategy
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.test.KoverExcludes
@@ -49,7 +49,7 @@ fun Navigation(
     contentAlignment: Alignment = Alignment.TopStart,
     entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator()),
-    sceneStrategy: SceneStrategy<NavigationRoute> = SinglePaneSceneStrategy(),
+    sceneStrategy: SceneStrategy<NavigationRoute> = AdaptiveSceneStrategy(),
     sizeTransform: SizeTransform? = null,
     transitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
         slideInHorizontally { fullWidth -> fullWidth } togetherWith

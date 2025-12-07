@@ -25,6 +25,7 @@ internal class LibraryProcessor(private val environment: SymbolProcessorEnvironm
 
         val directionList = symbols.mapNotNull { function ->
             environment.codeGenerator.createDirection(
+                logger = environment.logger,
                 function = function,
                 moduleName = moduleName,
                 isMultiplatformWithSingleTarget = isMultiplatformWithSingleTarget

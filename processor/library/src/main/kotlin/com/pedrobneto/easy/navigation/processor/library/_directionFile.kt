@@ -1,31 +1,52 @@
+@file:OptIn(KspExperimental::class)
+
 package com.pedrobneto.easy.navigation.processor.library
 
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
+import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.pedrobneto.easy.navigation.core.adaptive.ExtraPane
+import com.pedrobneto.easy.navigation.core.adaptive.SinglePane
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.GlobalScope
 import com.pedrobneto.easy.navigation.core.annotation.ParentDeeplink
 import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.annotation.Scope
-import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.processor.library.model.Direction
-import kotlin.reflect.KClass
+import com.pedrobneto.easy.navigation.processor.library.model.PaneStrategy
+import com.pedrobneto.easy.navigation.processor.library.model.QualifiedName
 
-private fun qualifiedNameForRoute(predicate: () -> KClass<*>): String? =
-    runCatching { predicate().qualifiedName.orEmpty() }
-        .getOrElse { exception ->
-            "(.*ClassNotFoundException: )([a-zA-Z._]+)".toRegex()
-                .find(exception.message.orEmpty())
-                ?.groupValues
-                ?.last()
-        }.takeIf { it != NavigationRoute::class.qualifiedName }
+private fun KSFunctionDeclaration.getPaneStrategy(logger: KSPLogger): PaneStrategy {
+    val extraPane = getAnnotationsByType(ExtraPane::class)
+        .firstOrNull()
+        ?.let {
+            val qualifiedName = QualifiedName(it::host) ?: return@let null
+            PaneStrategy.Extra(host = qualifiedName, ratio = it.ratio)
+        }
 
-@OptIn(KspExperimental::class)
+    val singlePane = getAnnotationsByType(SinglePane::class)
+        .firstOrNull()
+        ?.let { PaneStrategy.Single }
+
+    val foundList = listOfNotNull(extraPane, singlePane)
+    if (foundList.size > 1) {
+        logger.warn(
+            "Multiple panel strategies found for function ${this.simpleName.asString()}. " +
+                    "Using ${foundList.first().javaClass.simpleName}.",
+            this
+        )
+        return foundList.first()
+    }
+
+    return extraPane ?: singlePane ?: PaneStrategy.Adaptive()
+}
+
 internal fun CodeGenerator.createDirection(
+    logger: KSPLogger,
     function: KSFunctionDeclaration,
     moduleName: String,
     isMultiplatformWithSingleTarget: Boolean
@@ -41,12 +62,18 @@ internal fun CodeGenerator.createDirection(
 
     val routeQualifiedName = function.getAnnotationsByType(Route::class)
         .firstOrNull()
-        ?.let { qualifiedNameForRoute(it::value) }
-        ?: return null
+        ?.let { QualifiedName.invoke(it::value) }
+    if (routeQualifiedName == null) {
+        logger.warn(
+            "Missing @Route annotation for function ${function.simpleName.asString()}",
+            function
+        )
+        return null
+    }
 
     val parentRouteQualifiedName = function.getAnnotationsByType(ParentRoute::class)
         .firstOrNull()
-        ?.let { qualifiedNameForRoute(it::value) }
+        ?.let { QualifiedName.invoke(it::value) }
 
     val deeplinks = function.getAnnotationsByType(Deeplink::class)
         .map(Deeplink::value)
@@ -63,15 +90,10 @@ internal fun CodeGenerator.createDirection(
     val isGlobal = function.getAnnotationsByType(GlobalScope::class)
         .firstOrNull() != null
 
-    val routePackageName = routeQualifiedName.substringBeforeLast('.')
-    val routeClassName = routeQualifiedName.substringAfterLast('.')
-    val directionClassName = "${routeClassName}Direction"
-
-    val parentRoutePackageName = parentRouteQualifiedName?.substringBeforeLast('.')
-    val parentRouteClassName = parentRouteQualifiedName?.substringAfterLast('.')
+    val directionClassName = "${routeQualifiedName.className}Direction"
 
     val routeParameterName = function.parameters.firstOrNull {
-        it.type.resolve().declaration.qualifiedName?.asString() == routeQualifiedName
+        it.type.resolve().declaration.qualifiedName?.asString() == routeQualifiedName.raw
     }?.name?.asString()
 
     val direction = Direction(
@@ -80,11 +102,12 @@ internal fun CodeGenerator.createDirection(
         scopes = scopes,
         deeplinks = deeplinks,
         directionClassName = directionClassName,
-        routePackageName = routePackageName,
-        routeClassName = routeClassName,
-        parentRoutePackageName = parentRoutePackageName,
-        parentRouteClassName = parentRouteClassName,
+        routePackageName = routeQualifiedName.packageName,
+        routeClassName = routeQualifiedName.className,
+        parentRoutePackageName = parentRouteQualifiedName?.packageName,
+        parentRouteClassName = parentRouteQualifiedName?.className,
         parentDeeplink = parentDeeplink,
+        paneStrategy = function.getPaneStrategy(logger),
         functionPackageName = function.packageName.asString(),
         functionName = function.simpleName.asString(),
         routeParameterName = routeParameterName,
@@ -103,6 +126,24 @@ private fun Direction.createDirectionFile(generator: CodeGenerator) {
             null to null
         }
 
+    val paneStrategyImports =
+        mutableListOf("com.pedrobneto.easy.navigation.core.adaptive.PaneStrategy")
+    if (paneStrategy is PaneStrategy.Extra) {
+        paneStrategyImports.add(paneStrategy.host.raw)
+    }
+
+    val paneStrategyFormatted = "paneStrategy = " + when (paneStrategy) {
+        is PaneStrategy.Adaptive -> "PaneStrategy.Adaptive(" +
+                "\n\t\tratio = ${paneStrategy.ratio}f" +
+                "\n\t)"
+
+        is PaneStrategy.Single -> "PaneStrategy.Single"
+        is PaneStrategy.Extra -> "PaneStrategy.Extra(" +
+                "\n\t\thost = ${paneStrategy.host.className}::class," +
+                "\n\t\tratio = ${paneStrategy.ratio}f" +
+                "\n\t)"
+    }
+
     val imports = listOfNotNull(
         "androidx.compose.runtime.Composable",
         "com.pedrobneto.easy.navigation.core.annotation.GlobalScope"
@@ -112,7 +153,8 @@ private fun Direction.createDirectionFile(generator: CodeGenerator) {
         "com.pedrobneto.easy.navigation.core.model.NavigationDirection",
         "com.pedrobneto.easy.navigation.core.model.NavigationRoute",
         "$functionPackageName.$functionName",
-        parentRouteClassImport
+        parentRouteClassImport,
+        *paneStrategyImports.toTypedArray()
     ).sorted()
 
     val deeplinksFormatted = "deeplinks = " + if (deeplinks.isEmpty()) {
@@ -130,6 +172,7 @@ private fun Direction.createDirectionFile(generator: CodeGenerator) {
         deeplinksFormatted,
         parentDeeplinkFormatted,
         parentRouteClassParameter,
+        paneStrategyFormatted
     ).joinToString(",\n\t")
 
     val template = """

@@ -13,7 +13,7 @@
           <option value="clean" />
           <option value="assemble" />
           <option value="publish" />
-          <option value=":gradle-plugin:publishPlugins" />
+          <option value=":easy-navigation-gradle-plugin:publishPlugins" />
         </list>
       </option>
       <option name="vmOptions" />

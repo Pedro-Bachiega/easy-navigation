@@ -10,5 +10,4 @@ data class FourthScreenRoute(
     val description: String,
     val pathVariable: String,
     val deeplink: NavigationDeeplink
-) :
-    NavigationRoute
+) : NavigationRoute

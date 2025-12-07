@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.LocalNavigationController
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
+import com.pedrobneto.easy.navigation.core.annotation.ParentDeeplink
+import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.model.SecondScreenRoute
@@ -23,6 +25,7 @@ import com.pedrobneto.easy.navigation.model.ThirdScreenRoute
 @Composable
 @Deeplink("/third")
 @Route(ThirdScreenRoute::class)
+@ParentDeeplink("/second?title=Used navigateUp with @ParentDeeplink")
 internal fun ThirdScreenComposable(
     modifier: Modifier = Modifier,
     thirdScreenRoute: ThirdScreenRoute
@@ -42,25 +45,17 @@ internal fun ThirdScreenComposable(
     ) {
         Button(
             modifier = Modifier.weight(1f),
-            onClick = {
-                navigation.popUpTo(
-                    route = SecondScreenRoute(
-                        title = "Second Screen",
-                        description = "Backed using route"
-                    )
-                )
-            },
-            content = { Text("Back using route") }
+            onClick = { navigation.navigateUp() },
+            content = { Text("Back using navigateUp") }
         )
         Button(
             modifier = Modifier.weight(1f),
             onClick = {
                 navigation.navigateTo(
-                    deeplink = "/first",
-                    strategy = LaunchStrategy.SingleTop(true)
+                    "/fourth/Some cool value?title=Fourth screen title&description=Fourth screen description"
                 )
             },
-            content = { Text("Back using Deeplink") }
+            content = { Text("Next using Deeplink") }
         )
     }
 }

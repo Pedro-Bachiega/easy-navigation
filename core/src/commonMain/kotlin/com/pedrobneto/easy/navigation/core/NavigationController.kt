@@ -64,7 +64,11 @@ class NavigationController internal constructor(
     internal val directionProvider: (NavigationRoute) -> NavEntry<NavigationRoute> =
         entryProvider {
             directions.map { direction ->
-                addEntryProvider(clazz = direction.routeClass, content = direction::Draw)
+                addEntryProvider(
+                    clazz = direction.routeClass,
+                    metadata = direction.metadata,
+                    content = direction::Draw
+                )
             }
         }
 
@@ -74,6 +78,13 @@ class NavigationController internal constructor(
      * This is the last element in the [backStack] list.
      */
     val currentRoute: NavigationRoute get() = backStack.last()
+
+    /**
+     * The current index in the navigation back stack.
+     *
+     * This is the index of the last element in the [backStack] list.
+     */
+    val currentIndex: Int get() = backStack.lastIndex
 
     /**
      * Navigates to a given [NavigationRoute].
@@ -239,9 +250,7 @@ class NavigationController internal constructor(
                             error("Could not resolve deeplink for parent $parentDeeplink")
                         }
 
-                        route != null -> {
-                            navigateTo(route = route, strategy = LaunchStrategy.NewStack)
-                        }
+                        route != null -> backStack[currentIndex] = route
                     }
                 }.getOrElse { exception ->
                     val message = "Could not decode route for parent"

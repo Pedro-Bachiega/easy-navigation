@@ -14,15 +14,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.LocalNavigationController
+import com.pedrobneto.easy.navigation.core.adaptive.ExtraPane
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
+import com.pedrobneto.easy.navigation.core.annotation.ParentDeeplink
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
-import com.pedrobneto.easy.navigation.model.FirstScreenRoute
 import com.pedrobneto.easy.navigation.model.FourthScreenRoute
+import com.pedrobneto.easy.navigation.model.ThirdScreenRoute
 
 @Composable
 @Deeplink("/fourth/{pathVariable}")
+@ExtraPane(host = ThirdScreenRoute::class, ratio = 0.6f)
 @Route(FourthScreenRoute::class)
+@ParentDeeplink("/third?title=Used navigateUp with @ParentDeeplink&description=Used navigateUp with @ParentDeeplink")
 internal fun FourthScreenComposable(
     modifier: Modifier = Modifier,
     fourthScreenRoute: FourthScreenRoute
@@ -43,8 +47,8 @@ internal fun FourthScreenComposable(
     ) {
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.popUpTo(route = FirstScreenRoute) },
-            content = { Text("Back using route") }
+            onClick = { navigation.navigateUp() },
+            content = { Text("Back using navigateUp") }
         )
         Button(
             modifier = Modifier.weight(1f),

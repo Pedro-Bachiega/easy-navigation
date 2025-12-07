@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.LocalNavigationController
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.Route
+import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.model.FirstScreenRoute
 import com.pedrobneto.easy.navigation.model.SecondScreenRoute
 
@@ -42,13 +43,13 @@ internal fun FirstScreenComposable(modifier: Modifier = Modifier) = Column(
         )
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.navigateTo("/third?title=Third screen title&description=Third screen description") },
-            content = { Text("Third screen using Deeplink") }
-        )
-        Button(
-            modifier = Modifier.weight(1f),
-            onClick = { navigation.navigateTo("/fourth/Some cool value?title=Fourth screen title&description=Fourth screen description") },
-            content = { Text("Fourth screen using Deeplink") }
+            onClick = {
+                navigation.navigateTo(
+                    "/fourth/Some cool value?title=Fourth screen title&description=Fourth screen description",
+                    LaunchStrategy.NewStack
+                )
+            },
+            content = { Text("Deeplink clearing stack") }
         )
     }
 }

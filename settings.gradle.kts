@@ -22,7 +22,7 @@ includeBuild("kmp-build-plugin")
 
 include(
     ":core",
-    ":gradle-plugin",
+    ":easy-navigation-gradle-plugin",
     ":processor:application",
     ":processor:library",
     ":sample",

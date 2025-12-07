@@ -199,10 +199,24 @@ class NavigationControllerTest {
     fun `navigateTo with SingleTop with clearTop=true brings existing entry to top`() {
         controller.navigateTo(TestDetailsRoute(1))
         controller.navigateTo(TestSettingsRoute)
-        controller.navigateTo(TestDetailsRoute(2), LaunchStrategy.SingleTop(clearTop = true))
+        assertEquals(3, controller.backStack.size)
 
+        controller.navigateTo(TestDetailsRoute(2), LaunchStrategy.SingleTop(clearTop = true))
         assertEquals(2, controller.backStack.size)
         assertEquals(TestDetailsRoute(2), controller.backStack.last())
+    }
+
+    @Test
+    fun `navigateTo with SingleTop clears every existing instance and pushes a new one to the top`() {
+        controller.navigateTo(TestDetailsRoute(1))
+        controller.navigateTo(TestDetailsRoute(2))
+        controller.navigateTo(TestDetailsRoute(3))
+        controller.navigateTo(TestSettingsRoute)
+        assertEquals(5, controller.backStack.size)
+
+        controller.navigateTo(TestDetailsRoute(4), LaunchStrategy.SingleTop())
+        assertEquals(2, controller.backStack.size)
+        assertEquals(TestDetailsRoute(4), controller.backStack.last())
     }
     // endregion
 

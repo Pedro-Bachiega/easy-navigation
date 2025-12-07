@@ -14,13 +14,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.LocalNavigationController
+import com.pedrobneto.easy.navigation.core.annotation.Deeplink
+import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
-import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.model.FirstScreenRoute
 import com.pedrobneto.easy.navigation.model.SecondScreenRoute
 
 @Composable
+@Deeplink("/second")
 @Route(SecondScreenRoute::class)
+@ParentRoute(FirstScreenRoute::class)
 internal fun SecondScreenComposable(
     modifier: Modifier = Modifier,
     secondScreenRoute: SecondScreenRoute
@@ -39,18 +42,13 @@ internal fun SecondScreenComposable(
     ) {
         Button(
             modifier = Modifier.weight(1f),
-            onClick = { navigation.popUpTo(route = FirstScreenRoute) },
-            content = { Text("Back using route") }
+            onClick = { navigation.navigateUp() },
+            content = { Text("Back using navigateUp") }
         )
         Button(
             modifier = Modifier.weight(1f),
-            onClick = {
-                navigation.navigateTo(
-                    deeplink = "/first",
-                    strategy = LaunchStrategy.SingleTop(true)
-                )
-            },
-            content = { Text("Back using Deeplink") }
+            onClick = { navigation.navigateTo("/third?title=Third screen using deeplink&description=Some cool description") },
+            content = { Text("Next using Deeplink") }
         )
     }
 }

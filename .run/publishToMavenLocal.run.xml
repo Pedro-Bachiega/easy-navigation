@@ -10,7 +10,10 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value="assemble" />
+          <option value=":core:assemble" />
+          <option value=":easy-navigation-gradle-plugin:assemble" />
+          <option value=":processor:application:assemble" />
+          <option value=":processor:library:assemble" />
           <option value="publishToMavenLocal" />
         </list>
       </option>
