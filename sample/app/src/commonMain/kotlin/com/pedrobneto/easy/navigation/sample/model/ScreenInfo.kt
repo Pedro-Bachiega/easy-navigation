@@ -1,4 +1,4 @@
-package com.pedrobneto.easy.navigation.model
+package com.pedrobneto.easy.navigation.sample.model
 
 import androidx.compose.ui.unit.DpSize
 

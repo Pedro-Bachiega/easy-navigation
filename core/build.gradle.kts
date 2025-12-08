@@ -9,6 +9,7 @@ android.namespace = "com.pedrobneto.easy.navigation.core"
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            implementation(libs.jetbrains.compose.material3.adaptive.navigation3)
             implementation(libs.jetbrains.compose.navigation3.ui)
             implementation(libs.jetbrains.serialization)
             implementation(libs.toolkit.arch.lumber)

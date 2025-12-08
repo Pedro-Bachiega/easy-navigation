@@ -3,6 +3,7 @@ package com.pedrobneto.easy.navigation.core
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SizeTransform
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -14,8 +15,8 @@ import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
 import androidx.navigationevent.NavigationEvent
-import com.pedrobneto.easy.navigation.core.adaptive.AdaptiveSceneStrategy
 import com.pedrobneto.easy.navigation.core.adaptive.popTo
+import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategy
 import com.pedrobneto.easy.navigation.core.adaptive.transitionTo
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
@@ -39,6 +40,7 @@ import com.pedrobneto.easy.navigation.test.KoverExcludes
  * @param popTransitionSpec The transition spec to be used for pop transitions between scenes.
  * @param predictivePopTransitionSpec The transition spec to be used for predictive pop transitions between scenes.
  */
+@ExperimentalMaterial3AdaptiveApi
 @Composable
 @KoverExcludes
 fun Navigation(
@@ -48,7 +50,7 @@ fun Navigation(
     contentAlignment: Alignment = Alignment.TopStart,
     entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator()),
-    sceneStrategy: SceneStrategy<NavigationRoute> = AdaptiveSceneStrategy(isUsingAdaptiveLayout = false),
+    sceneStrategy: SceneStrategy<NavigationRoute> = rememberAdaptiveSceneStrategy(),
     sizeTransform: SizeTransform? = null,
     transitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
         initialState transitionTo targetState

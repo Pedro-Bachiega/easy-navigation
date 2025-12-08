@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -17,6 +19,23 @@ import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+
+@ExperimentalMaterial3AdaptiveApi
+@Composable
+fun rememberAdaptiveSceneStrategy(
+    isUsingAdaptiveLayout: Boolean = true,
+    orientation: AdaptiveSceneStrategy.Orientation = AdaptiveSceneStrategy.Orientation.Horizontal,
+    divider: @Composable (
+        current: NavEntry<NavigationRoute>,
+        previous: NavEntry<NavigationRoute>
+    ) -> Unit = { _, _ -> }
+): SceneStrategy<NavigationRoute> {
+    val listDetailStrategy = rememberListDetailSceneStrategy<NavigationRoute>()
+    val adaptiveSceneStrategy = remember(isUsingAdaptiveLayout, orientation, divider) {
+        AdaptiveSceneStrategy(isUsingAdaptiveLayout, orientation, divider)
+    }
+    return adaptiveSceneStrategy then listDetailStrategy
+}
 
 /**
  * A [SceneStrategy] that adapts the layout of scenes based on a [PaneStrategy].
@@ -69,7 +88,7 @@ class AdaptiveSceneStrategy(
                 )
             }
 
-            is PaneStrategy.Adaptive -> AdaptivePaneScene(
+            is PaneStrategy.Adaptive if isUsingAdaptiveLayout -> AdaptivePaneScene(
                 key = currentEntry.contentKey,
                 previousEntries = previousEntries,
                 entry = currentEntry,
@@ -172,7 +191,7 @@ class AdaptiveSceneStrategy(
         override val previousEntries: List<NavEntry<NavigationRoute>>,
         internal val currentEntry: NavEntry<NavigationRoute>,
         internal val previousEntry: NavEntry<NavigationRoute>,
-        private val entryRatio: Float,
+        internal val entryRatio: Float,
         private val orientation: Orientation,
         private val divider: @Composable (
             current: NavEntry<NavigationRoute>,

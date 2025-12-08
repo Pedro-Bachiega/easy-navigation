@@ -12,6 +12,7 @@ import java.util.Locale
 import kotlin.reflect.full.declaredMemberProperties
 
 abstract class BaseGradlePlugin : Plugin<Project> {
+    protected abstract val commonMainOnly: Boolean
     protected abstract val processor: String
 
     override fun apply(target: Project) = with(target) {
@@ -69,6 +70,8 @@ abstract class BaseGradlePlugin : Plugin<Project> {
                         return@configureEach
                     }
 
+                    if (commonMainOnly) return@configureEach
+
                     val capitalizedTargetName = targetName.replaceFirstChar {
                         if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString()
                     }
@@ -95,9 +98,11 @@ abstract class BaseGradlePlugin : Plugin<Project> {
 }
 
 internal class ApplicationGradlePlugin : BaseGradlePlugin() {
+    override val commonMainOnly: Boolean = true
     override val processor: String = "application"
 }
 
 internal class LibraryGradlePlugin : BaseGradlePlugin() {
+    override val commonMainOnly: Boolean = false
     override val processor: String = "library"
 }

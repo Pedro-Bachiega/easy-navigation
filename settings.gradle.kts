@@ -25,6 +25,7 @@ include(
     ":easy-navigation-gradle-plugin",
     ":processor:application",
     ":processor:library",
-    ":sample",
+    ":sample:app",
+    ":sample:target:desktop",
     ":test",
 )

@@ -8,6 +8,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.navigation3.scene.Scene
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import kotlin.math.roundToInt
 
 internal infix fun Scene<NavigationRoute>.transitionTo(target: Scene<NavigationRoute>): ContentTransform {
     val targetIsDualPane = target is AdaptiveSceneStrategy.DualPaneScene
@@ -17,7 +18,10 @@ internal infix fun Scene<NavigationRoute>.transitionTo(target: Scene<NavigationR
     return when {
         currentIsAdaptivePane && targetIsDualPane && target.isAfter(this) -> extraFadeIn()
         currentIsDualPane && targetIsDualPane && target.isReplacingExtra(this) -> none()
-        currentIsDualPane && targetIsDualPane && target.isAfter(this) -> halfSlideIn()
+        currentIsDualPane && targetIsDualPane && target.isAfter(this) -> {
+            ratioSlideIn(target)
+        }
+
         else -> fullSlideIn()
     }
 }
@@ -28,15 +32,18 @@ internal infix fun Scene<NavigationRoute>.popTo(target: Scene<NavigationRoute>):
     val targetIsAdaptivePane = target is AdaptiveSceneStrategy.AdaptivePaneScene
 
     return when {
-        currentIsDualPane && targetIsDualPane && this.isAfter(target) -> halfSlideOut()
+        currentIsDualPane && targetIsDualPane && this.isAfter(target) -> {
+            ratioSlideOut(this)
+        }
+
         currentIsDualPane && targetIsAdaptivePane && this.isAfter(target) -> extraFadeOut()
         else -> fullSlideOut()
     }
 }
 
-private fun halfSlideIn(): ContentTransform =
-    slideInHorizontally { fullWidth -> fullWidth / 2 } togetherWith
-            slideOutHorizontally { fullWidth -> -fullWidth / 2 }
+private fun ratioSlideIn(target: AdaptiveSceneStrategy.DualPaneScene): ContentTransform =
+    slideInHorizontally { fullWidth -> (fullWidth * target.entryRatio).roundToInt() } togetherWith
+            slideOutHorizontally { fullWidth -> -(fullWidth * target.entryRatio).roundToInt() }
 
 private fun fullSlideIn(): ContentTransform =
     slideInHorizontally { fullWidth -> fullWidth } togetherWith
@@ -44,9 +51,9 @@ private fun fullSlideIn(): ContentTransform =
 
 private fun extraFadeIn(): ContentTransform = none()
 
-private fun halfSlideOut(): ContentTransform =
-    slideInHorizontally { fullWidth -> -fullWidth / 2 } togetherWith
-            slideOutHorizontally { fullWidth -> fullWidth / 2 }
+private fun ratioSlideOut(current: AdaptiveSceneStrategy.DualPaneScene): ContentTransform =
+    slideInHorizontally { fullWidth -> -(fullWidth * current.entryRatio).roundToInt() } togetherWith
+            slideOutHorizontally { fullWidth -> (fullWidth * current.entryRatio).roundToInt() }
 
 private fun fullSlideOut(): ContentTransform =
     slideInHorizontally { fullWidth -> -fullWidth } togetherWith

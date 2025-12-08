@@ -6,6 +6,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class FileExtensionTest {
 
@@ -31,23 +32,45 @@ class FileExtensionTest {
     }
 
     @Test
-    fun `GIVEN files WHEN filtering by source set THEN it should return only files from that source set`() {
+    fun `GIVEN files WHEN filtering by source set THEN it should return only files from that source set and commonMain`() {
         // GIVEN
-        val jvmDir = temporaryFolder.newFolder("build", "generated", "ksp", "jvm", "jvmMain")
+        val jvmDir =
+            temporaryFolder.newFolder("build", "generated", "ksp", "jvm", "jvmMain")
+        val androidDir =
+            temporaryFolder.newFolder("build", "generated", "ksp", "android", "androidDebug")
         val commonDir =
             temporaryFolder.newFolder("build", "generated", "ksp", "metadata", "commonMain")
         val jvmFile = File(jvmDir, "JvmDirectionRegistry.kt").apply { createNewFile() }
+        val androidFile = File(androidDir, "AndroidDirectionRegistry.kt").apply { createNewFile() }
         val commonFile = File(commonDir, "CommonDirectionRegistry.kt").apply { createNewFile() }
 
-        val files = sequenceOf(jvmFile, commonFile)
+        val files = sequenceOf(androidFile, jvmFile, commonFile)
 
         // WHEN
         val result = files.filteredBySourceSet("jvmMain").toList()
 
         // THEN
         assertEquals(2, result.size)
-        assertContains(result, jvmFile, "jvmFileMissing")
-        assertContains(result, commonFile, "commonFileMissing")
+        assertContains(result, commonFile, "common file missing")
+        assertContains(result, jvmFile, "jvm file missing")
+        assertFalse { result.contains(androidFile) }
+    }
+
+    @Test
+    fun `GIVEN all files in commonMin WHEN filtering by source set THEN it should return empty`() {
+        // GIVEN
+        val commonDir =
+            temporaryFolder.newFolder("build", "generated", "ksp", "metadata", "commonMain")
+        val commonFile1 = File(commonDir, "CommonDirectionRegistry.kt").apply { createNewFile() }
+        val commonFile2 = File(commonDir, "AnotherDirectionRegistry.kt").apply { createNewFile() }
+
+        val files = sequenceOf(commonFile1, commonFile2)
+
+        // WHEN
+        val result = files.filteredBySourceSet("jvmMain").toList()
+
+        // THEN
+        assertEquals(0, result.size)
     }
 
     @Test

@@ -24,6 +24,7 @@ class RegistryFileTest {
 
         // WHEN
         codeGenerator.createGlobalRegistryFile(
+            isActual = false,
             registries = registries,
             directions = emptyList()
         )
@@ -59,6 +60,7 @@ class RegistryFileTest {
 
         // WHEN
         codeGenerator.createGlobalRegistryFile(
+            isActual = false,
             registries = emptyList(),
             directions = directions
         )
@@ -95,6 +97,7 @@ class RegistryFileTest {
 
         // WHEN
         codeGenerator.createGlobalRegistryFile(
+            isActual = false,
             registries = registries,
             directions = directions
         )
@@ -136,6 +139,7 @@ class RegistryFileTest {
 
         // WHEN
         codeGenerator.createGlobalRegistryFile(
+            isActual = false,
             registries = registries,
             directions = directions
         )

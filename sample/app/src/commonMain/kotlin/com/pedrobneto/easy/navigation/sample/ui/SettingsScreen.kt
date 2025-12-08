@@ -1,4 +1,4 @@
-package com.pedrobneto.easy.navigation.ui
+package com.pedrobneto.easy.navigation.sample.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -6,15 +6,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Checkbox
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,21 +28,25 @@ import com.pedrobneto.easy.navigation.core.LocalNavigationController
 import com.pedrobneto.easy.navigation.core.adaptive.SinglePane
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.Route
-import com.pedrobneto.easy.navigation.model.SettingsRoute
+import com.pedrobneto.easy.navigation.sample.model.SettingsRoute
 
 @Deeplink("/settings")
 @Route(SettingsRoute::class)
 @SinglePane
 @Composable
-fun SettingsScreen() {
+internal fun SettingsScreen() {
     val navigation = LocalNavigationController.current
+    SettingsContent(onBackClick = navigation::safeNavigateUp)
+}
 
+@Composable
+private fun SettingsContent(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = { navigation.safeNavigateUp() }) {
+                    IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -77,8 +81,8 @@ private fun SettingItem(title: String, subtitle: String) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
-            Text(text = title, style = MaterialTheme.typography.subtitle1)
-            Text(text = subtitle, style = MaterialTheme.typography.caption)
+            Text(text = title, style = MaterialTheme.typography.labelMedium)
+            Text(text = subtitle, style = MaterialTheme.typography.bodySmall)
         }
         Checkbox(checked = isChecked, onCheckedChange = { isChecked = it })
     }
@@ -86,4 +90,4 @@ private fun SettingItem(title: String, subtitle: String) {
 
 @Composable
 @Preview
-private fun SettingsScreenPreview() = MaterialTheme { SettingsScreen() }
+private fun SettingsScreenPreview() = MaterialTheme { SettingsContent {} }

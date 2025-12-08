@@ -1,4 +1,4 @@
-package com.pedrobneto.easy.navigation.ui
+package com.pedrobneto.easy.navigation.sample.ui
 
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -13,9 +13,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
-import com.pedrobneto.easy.navigation.model.Orientation
-import com.pedrobneto.easy.navigation.model.ScreenInfo
-import com.pedrobneto.easy.navigation.model.WindowSize
+import com.pedrobneto.easy.navigation.sample.model.Orientation
+import com.pedrobneto.easy.navigation.sample.model.ScreenInfo
+import com.pedrobneto.easy.navigation.sample.model.WindowSize
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -63,6 +63,7 @@ private val WindowSizeClass.landscapeScreenSize: WindowSize
     }
 private val WindowSizeClass.portraitScreenSize: WindowSize
     get() = when {
-        isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND) -> WindowSize.Medium
+        isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND) -> WindowSize.Large
+        isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND) -> WindowSize.Medium
         else -> WindowSize.Small
     }

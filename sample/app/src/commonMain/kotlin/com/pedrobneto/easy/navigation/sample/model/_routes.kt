@@ -1,4 +1,4 @@
-package com.pedrobneto.easy.navigation.model
+package com.pedrobneto.easy.navigation.sample.model
 
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import kotlinx.serialization.Serializable
@@ -8,6 +8,9 @@ data object HomeRoute : NavigationRoute
 
 @Serializable
 data class DetailsRoute(val id: Long) : NavigationRoute
+
+@Serializable
+data object ExtraDetailsRoute : NavigationRoute
 
 @Serializable
 data object SettingsRoute : NavigationRoute
