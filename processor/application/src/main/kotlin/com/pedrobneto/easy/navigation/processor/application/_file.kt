@@ -19,11 +19,11 @@ internal val File.isWantedDir: Boolean
         ".kotlin",
         ".run",
         "assets",
-        "build",
         "composeResources",
         "gradle",
         "res",
         "resources",
+        "src",
     )
 
 private fun File.isInSourceSet(sourceSet: String) =
