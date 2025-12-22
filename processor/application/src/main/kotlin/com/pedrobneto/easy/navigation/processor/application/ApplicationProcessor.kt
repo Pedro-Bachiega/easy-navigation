@@ -30,10 +30,12 @@ internal class ApplicationProcessor(private val environment: SymbolProcessorEnvi
             ?: "commonMain"
 
         val filesToProcess = rootDir.walkTopDown()
+            .onEnter(File::isWantedDir)
             .filterValidFiles()
             .filteredBySourceSet(sourceSet)
             .toList()
-            .ifEmpty { return emptyList() }
+
+        if (filesToProcess.isEmpty()) return emptyList()
 
         environment.codeGenerator.createGlobalRegistryFile(
             registries = filesToProcess.extractRegistries(),

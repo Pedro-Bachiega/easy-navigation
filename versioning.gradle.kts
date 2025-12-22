@@ -1,10 +1,8 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
-group = runCatching {
-    providers.gradleProperty("GROUP").get().takeIf { it.isNotEmpty() }
-}.getOrDefault("io.github.pedro-bachiega")
+group = "io.github.pedro-bachiega"
 
-version = runCatching {
+version = kotlin.runCatching {
     providers.gradleProperty("VERSION_NAME").get().takeIf { it.isNotEmpty() }
 }.getOrNull() ?: runGitCommand(
     fileName = "version-name.txt",

@@ -11,6 +11,21 @@ private val File.hasValidName: Boolean
 private val File.hasValidPath: Boolean
     get() = path.replace('\\', '/').matches(Regex(".+build/generated/ksp/.+"))
 
+internal val File.isWantedDir: Boolean
+    get() = this.name !in listOf(
+        ".github",
+        ".gradle",
+        ".idea",
+        ".kotlin",
+        ".run",
+        "assets",
+        "build",
+        "composeResources",
+        "gradle",
+        "res",
+        "resources",
+    )
+
 private fun File.isInSourceSet(sourceSet: String) =
     path.matches(Regex(".+build/generated/ksp/[^/]+/$sourceSet/.+"))
 
