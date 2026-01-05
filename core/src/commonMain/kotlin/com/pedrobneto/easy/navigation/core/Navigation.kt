@@ -40,9 +40,10 @@ import com.pedrobneto.easy.navigation.test.KoverExcludes
  * @param popTransitionSpec The transition spec to be used for pop transitions between scenes.
  * @param predictivePopTransitionSpec The transition spec to be used for predictive pop transitions between scenes.
  */
-@ExperimentalMaterial3AdaptiveApi
 @Composable
+@ExperimentalMaterial3AdaptiveApi
 @KoverExcludes
+@Suppress("ComposableNaming")
 fun Navigation(
     modifier: Modifier,
     initialRoute: NavigationRoute,
@@ -61,7 +62,7 @@ fun Navigation(
     predictivePopTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.(
         @NavigationEvent.SwipeEdge Int
     ) -> ContentTransform = defaultPredictivePopTransitionSpec(),
-) {
+): NavigationController {
     val controller =
         NavigationController(initialRoute = initialRoute, directionRegistries = directionRegistries)
     CompositionLocalProvider(LocalNavigationController provides controller) {
@@ -78,4 +79,5 @@ fun Navigation(
             predictivePopTransitionSpec = predictivePopTransitionSpec,
         )
     }
+    return controller
 }
