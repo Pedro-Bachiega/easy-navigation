@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
 sealed class PaneStrategy {
     /**
      * The content will be displayed in a single pane, or in an adaptive way,
-     * following the configuration set in the `NavHost`.
+     * following the configuration set in the `NavDisplay`.
      */
     @Serializable
     data class Adaptive(
@@ -21,7 +21,7 @@ sealed class PaneStrategy {
     ) : PaneStrategy()
 
     /**
-     * The content will always be displayed in a single pane, regardless of the `NavHost` configuration.
+     * The content will always be displayed in a single pane, regardless of the `NavDisplay` configuration.
      */
     @Serializable
     data object Single : PaneStrategy()

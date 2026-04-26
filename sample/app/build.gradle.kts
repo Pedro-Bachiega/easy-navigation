@@ -6,9 +6,9 @@ plugins {
     alias(libs.plugins.easy.navigation.library)
 }
 
-android.namespace = "com.pedrobneto.easy.navigation.sample"
-
 kotlin {
+    android.namespace = "com.pedrobneto.easy.navigation.sample"
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.jetbrains.compose.foundation)

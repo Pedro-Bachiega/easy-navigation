@@ -3,9 +3,15 @@ package com.pedrobneto.easy.navigation.processor.library
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.processing.CodeGenerator
+import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.symbol.KSAnnotation
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSName
+import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.KSTypeReference
+import com.google.devtools.ksp.symbol.KSValueArgument
 import com.google.devtools.ksp.symbol.KSValueParameter
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
@@ -18,6 +24,7 @@ import io.mockk.mockkStatic
 import io.mockk.slot
 import org.junit.Before
 import java.io.OutputStream
+import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -27,6 +34,7 @@ import kotlin.test.assertNull
 class DirectionProcessTest {
 
     private val codeGenerator = mockk<CodeGenerator>(relaxed = true)
+    private val logger = mockk<KSPLogger>(relaxed = true)
     private val outputStream = mockk<OutputStream>(relaxed = true)
 
     @Before
@@ -43,7 +51,7 @@ class DirectionProcessTest {
         every { function.getAnnotationsByType(Route::class) } returns emptySequence()
 
         // WHEN
-        val result = codeGenerator.createDirection(function, "testModule", true)
+        val result = codeGenerator.createDirection(logger, function, "testModule", true)
 
         // THEN
         assertNull(result)
@@ -70,7 +78,7 @@ class DirectionProcessTest {
         every { outputStream.write(capture(fileContentSlot)) } returns Unit
 
         // WHEN
-        val result = codeGenerator.createDirection(function, "testModule", true)
+        val result = codeGenerator.createDirection(logger, function, "testModule", true)
 
         // THEN
         assertNotNull(result)
@@ -80,15 +88,22 @@ class DirectionProcessTest {
             package com.pedrobneto.easy.navigation.processor.library.DirectionProcessTest
 
             import androidx.compose.runtime.Composable
-            import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
+            import com.pedrobneto.easy.navigation.core.adaptive.PaneStrategy
             import com.pedrobneto.easy.navigation.core.model.NavigationDirection
             import com.pedrobneto.easy.navigation.core.model.NavigationRoute
             import com.sample.ui.SampleScreen
+            import kotlinx.serialization.modules.PolymorphicModuleBuilder
 
             internal data object SampleRouteDirection : NavigationDirection(
                 routeClass = SampleRoute::class,
-                deeplinks = emptyList()
+                deeplinks = emptyList(),
+                paneStrategy = PaneStrategy.Adaptive(
+                    ratio = 1.0f
+                )
             ) {
+                override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) =
+                    builder.subclass(SampleRoute::class, SampleRoute.serializer())
+
                 @Composable
                 override fun Draw(route: NavigationRoute) {
                     SampleScreen()
@@ -110,7 +125,7 @@ class DirectionProcessTest {
         )
 
         // WHEN
-        val result = codeGenerator.createDirection(function, "testModule", true)
+        val result = codeGenerator.createDirection(logger, function, "testModule", true)
 
         // THEN
         assertNotNull(result)
@@ -131,7 +146,7 @@ class DirectionProcessTest {
         )
 
         // WHEN
-        val result = codeGenerator.createDirection(function, "testModule", true)
+        val result = codeGenerator.createDirection(logger, function, "testModule", true)
 
         // THEN
         assertNotNull(result)
@@ -148,7 +163,7 @@ class DirectionProcessTest {
         )
 
         // WHEN
-        val result = codeGenerator.createDirection(function, "testModule", true)
+        val result = codeGenerator.createDirection(logger, function, "testModule", true)
 
         // THEN
         assertNotNull(result)
@@ -168,7 +183,7 @@ class DirectionProcessTest {
         )
 
         // WHEN
-        val result = codeGenerator.createDirection(function, "testModule", true)
+        val result = codeGenerator.createDirection(logger, function, "testModule", true)
 
         // THEN
         assertNotNull(result)
@@ -185,7 +200,7 @@ class DirectionProcessTest {
         )
 
         // WHEN
-        val result = codeGenerator.createDirection(function, "jvm", isMultiplatformWithSingleTarget = false)
+        val result = codeGenerator.createDirection(logger, function, "jvm", isMultiplatformWithSingleTarget = false)
 
         // THEN
         assertNull(result)
@@ -200,7 +215,7 @@ class DirectionProcessTest {
         )
 
         // WHEN
-        val result = codeGenerator.createDirection(function, "jvm", isMultiplatformWithSingleTarget = false)
+        val result = codeGenerator.createDirection(logger, function, "jvm", isMultiplatformWithSingleTarget = false)
 
         // THEN
         assertNotNull(result)
@@ -215,7 +230,7 @@ class DirectionProcessTest {
         )
 
         // WHEN
-        val result = codeGenerator.createDirection(function, "jvm", isMultiplatformWithSingleTarget = true)
+        val result = codeGenerator.createDirection(logger, function, "jvm", isMultiplatformWithSingleTarget = true)
 
         // THEN
         assertNotNull(result)
@@ -244,13 +259,88 @@ class DirectionProcessTest {
         every { file.filePath } returns filePath
         every { function.parameters } returns parameters
 
-        every { function.getAnnotationsByType(Route::class) } returns routeAnnotations.asSequence()
-        every { function.getAnnotationsByType(ParentRoute::class) } returns parentRouteAnnotations.asSequence()
-        every { function.getAnnotationsByType(Deeplink::class) } returns deeplinkAnnotations.asSequence()
-        every { function.getAnnotationsByType(Scope::class) } returns scopeAnnotations.asSequence()
+        every { function.annotations } returns buildList {
+            addAll(routeAnnotations.map { it.toKsAnnotation(Route::class, "value") })
+            addAll(parentRouteAnnotations.map { it.toKsAnnotation(ParentRoute::class, "value") })
+            addAll(deeplinkAnnotations.map { it.toKsAnnotation(Deeplink::class, "value") })
+            addAll(scopeAnnotations.map { it.toKsAnnotation(Scope::class, "value") })
+        }.asSequence()
 
         return function
     }
+
+    private fun Route.toKsAnnotation(annotationClass: KClass<out Annotation>, argumentName: String) =
+        mockAnnotation(
+            annotationClass = annotationClass,
+            argumentName = argumentName,
+            argumentValue = runCatching { value.qualifiedName.orEmpty() }
+                .getOrElse { exception -> exception.classNameFromMessage() }
+                .let(::mockType)
+        )
+
+    private fun ParentRoute.toKsAnnotation(annotationClass: KClass<out Annotation>, argumentName: String) =
+        mockAnnotation(
+            annotationClass = annotationClass,
+            argumentName = argumentName,
+            argumentValue = value.qualifiedName.orEmpty().let(::mockType)
+        )
+
+    private fun Deeplink.toKsAnnotation(annotationClass: KClass<out Annotation>, argumentName: String) =
+        mockAnnotation(annotationClass, argumentName, value)
+
+    private fun Scope.toKsAnnotation(annotationClass: KClass<out Annotation>, argumentName: String) =
+        mockAnnotation(annotationClass, argumentName, value)
+
+    private fun mockAnnotation(
+        annotationClass: KClass<out Annotation>,
+        argumentName: String,
+        argumentValue: Any?
+    ): KSAnnotation {
+        val annotation = mockk<KSAnnotation>()
+        val shortName = mockName(annotationClass.simpleName.orEmpty())
+        val qualifiedName = mockName(annotationClass.qualifiedName.orEmpty())
+        val declaration = mockk<KSDeclaration>()
+        val type = mockk<KSType>()
+        val typeReference = mockk<KSTypeReference>()
+        val argument = mockk<KSValueArgument>()
+
+        every { annotation.shortName } returns shortName
+        every { annotation.annotationType } returns typeReference
+        every { typeReference.resolve() } returns type
+        every { type.declaration } returns declaration
+        every { declaration.qualifiedName } returns qualifiedName
+        every { annotation.arguments } returns listOf(argument)
+        every { argument.name } returns mockName(argumentName)
+        every { argument.value } returns argumentValue
+
+        return annotation
+    }
+
+    private fun mockType(qualifiedClassName: String): KSType {
+        val type = mockk<KSType>()
+        val declaration = mockk<KSDeclaration>()
+        val packageName = qualifiedClassName.substringBeforeLast('.')
+
+        every { type.declaration } returns declaration
+        every { declaration.packageName } returns mockName(packageName)
+        every { declaration.qualifiedName } returns mockName(qualifiedClassName)
+
+        return type
+    }
+
+    private fun mockName(value: String): KSName {
+        val name = mockk<KSName>()
+        every { name.asString() } returns value
+        every { name.getShortName() } returns value.substringAfterLast('.')
+        return name
+    }
+
+    private fun Throwable.classNameFromMessage() =
+        "(.*ClassNotFoundException: )([a-zA-Z._]+)".toRegex()
+            .find(message.orEmpty())
+            ?.groupValues
+            ?.last()
+            .orEmpty()
 
     private fun String.normalizeLineEndings(): String =
         this.replace("\r\n", "\n").replace("\t", "    ")

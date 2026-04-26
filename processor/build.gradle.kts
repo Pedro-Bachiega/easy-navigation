@@ -46,5 +46,6 @@ dependencies {
     implementation(libs.google.ksp)
 
     testImplementation(libs.test.mockk)
+    testImplementation(libs.jetbrains.compose.navigation3.ui)
     testImplementation(kotlin("test"))
 }

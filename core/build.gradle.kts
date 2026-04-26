@@ -5,9 +5,9 @@ plugins {
     id("plugin-test")
 }
 
-android.namespace = "com.pedrobneto.easy.navigation.core"
-
 kotlin {
+    android.namespace = "com.pedrobneto.easy.navigation.core"
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.jetbrains.compose.material3.adaptive.navigation3)

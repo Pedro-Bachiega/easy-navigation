@@ -4,6 +4,7 @@ package com.pedrobneto.easy.navigation.core
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
@@ -31,6 +32,41 @@ import kotlin.reflect.KClass
 @KoverExcludes
 val LocalNavigationController: ProvidableCompositionLocal<NavigationController> =
     staticCompositionLocalOf { error("Navigation not initialized. Make sure you have a Navigation composable in your hierarchy.") }
+
+/**
+ * Creates and remembers a [NavigationController] instance.
+ *
+ * @param initialRoute The initial route to be displayed when the navigation is first set up.
+ * @param directionRegistries A list of [DirectionRegistry] instances containing all possible navigation directions.
+ * @param backStack An optional [NavBackStack] to be used as the back stack. If not provided,
+ * a new one will be created with the [initialRoute].
+ * @param json The [Json] instance used for deserializing route arguments.
+ * @return A remembered [NavigationController] instance.
+ */
+@Composable
+@KoverExcludes
+fun rememberNavigationController(
+    initialRoute: NavigationRoute,
+    directionRegistries: List<DirectionRegistry>,
+    backStack: NavBackStack<NavigationRoute> = rememberNavBackStack(
+        initialRoute,
+        directionRegistries
+    ),
+    json: Json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        prettyPrint = true
+    }
+): NavigationController {
+    val controller = remember(initialRoute, directionRegistries) {
+        NavigationController(
+            backStack = backStack,
+            directionRegistryList = directionRegistries,
+            json = json
+        )
+    }
+    return controller
+}
 
 /**
  * A controller that manages the navigation state and back stack of the application.
@@ -263,37 +299,5 @@ class NavigationController internal constructor(
                 backStack.removeRange(startIndex, backStack.size)
             }
         }
-    }
-
-    companion object {
-        /**
-         * Creates and remembers a [NavigationController] instance.
-         *
-         * @param initialRoute The initial route to be displayed when the navigation is first set up.
-         * @param directionRegistries A list of [DirectionRegistry] instances containing all possible navigation directions.
-         * @param backStack An optional [NavBackStack] to be used as the back stack. If not provided,
-         * a new one will be created with the [initialRoute].
-         * @param json The [Json] instance used for deserializing route arguments.
-         * @return A remembered [NavigationController] instance.
-         */
-        @Composable
-        @KoverExcludes
-        operator fun invoke(
-            initialRoute: NavigationRoute,
-            directionRegistries: List<DirectionRegistry>,
-            backStack: NavBackStack<NavigationRoute> = rememberNavBackStack(
-                initialRoute,
-                directionRegistries
-            ),
-            json: Json = Json {
-                ignoreUnknownKeys = true
-                encodeDefaults = true
-                prettyPrint = true
-            }
-        ) = NavigationController(
-            backStack = backStack,
-            directionRegistryList = directionRegistries,
-            json = json
-        )
     }
 }

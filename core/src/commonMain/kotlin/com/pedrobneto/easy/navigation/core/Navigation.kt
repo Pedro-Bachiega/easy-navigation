@@ -2,6 +2,7 @@ package com.pedrobneto.easy.navigation.core
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.SizeTransform
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
@@ -11,12 +12,13 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.Scene
+import androidx.navigation3.scene.SceneDecoratorStrategy
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
 import androidx.navigationevent.NavigationEvent
 import com.pedrobneto.easy.navigation.core.adaptive.popTo
-import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategy
+import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategies
 import com.pedrobneto.easy.navigation.core.adaptive.transitionTo
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
@@ -32,9 +34,12 @@ import com.pedrobneto.easy.navigation.test.KoverExcludes
  * @param modifier The modifier to be applied to the navigation container.
  * @param initialRoute The initial route to be displayed.
  * @param directionRegistries The list of direction registries to be used for navigation.
+ * @param controller The navigation controller to be provided to the content.
  * @param contentAlignment The alignment of the content within the navigation container.
  * @param entryDecorators A list of decorators to be applied to each navigation entry.
- * @param sceneStrategy The strategy to be used for displaying scenes.
+ * @param sceneStrategies The strategies to be used for displaying scenes.
+ * @param sceneDecoratorStrategies A list of decorators to be applied to each scene.
+ * @param sharedTransitionScope The shared transition scope to allow transitions between scenes.
  * @param sizeTransform The transform to be applied to the size of the content.
  * @param transitionSpec The transition spec to be used for transitions between scenes.
  * @param popTransitionSpec The transition spec to be used for pop transitions between scenes.
@@ -48,10 +53,16 @@ fun Navigation(
     modifier: Modifier,
     initialRoute: NavigationRoute,
     directionRegistries: List<DirectionRegistry>,
+    controller: NavigationController = rememberNavigationController(
+        initialRoute = initialRoute,
+        directionRegistries = directionRegistries
+    ),
     contentAlignment: Alignment = Alignment.TopStart,
     entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator()),
-    sceneStrategy: SceneStrategy<NavigationRoute> = rememberAdaptiveSceneStrategy(),
+    sceneStrategies: List<SceneStrategy<NavigationRoute>> = rememberAdaptiveSceneStrategies(),
+    sceneDecoratorStrategies: List<SceneDecoratorStrategy<NavigationRoute>> = emptyList(),
+    sharedTransitionScope: SharedTransitionScope? = null,
     sizeTransform: SizeTransform? = null,
     transitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
         initialState transitionTo targetState
@@ -62,22 +73,19 @@ fun Navigation(
     predictivePopTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.(
         @NavigationEvent.SwipeEdge Int
     ) -> ContentTransform = defaultPredictivePopTransitionSpec(),
-): NavigationController {
-    val controller =
-        NavigationController(initialRoute = initialRoute, directionRegistries = directionRegistries)
-    CompositionLocalProvider(LocalNavigationController provides controller) {
-        NavDisplay(
-            modifier = modifier,
-            backStack = controller.backStack,
-            entryProvider = controller.directionProvider,
-            contentAlignment = contentAlignment,
-            entryDecorators = entryDecorators,
-            sceneStrategy = sceneStrategy,
-            sizeTransform = sizeTransform,
-            transitionSpec = transitionSpec,
-            popTransitionSpec = popTransitionSpec,
-            predictivePopTransitionSpec = predictivePopTransitionSpec,
-        )
-    }
-    return controller
+) = CompositionLocalProvider(LocalNavigationController provides controller) {
+    NavDisplay(
+        modifier = modifier,
+        backStack = controller.backStack,
+        entryProvider = controller.directionProvider,
+        contentAlignment = contentAlignment,
+        entryDecorators = entryDecorators,
+        sceneStrategies = sceneStrategies,
+        sceneDecoratorStrategies = sceneDecoratorStrategies,
+        sharedTransitionScope = sharedTransitionScope,
+        sizeTransform = sizeTransform,
+        transitionSpec = transitionSpec,
+        popTransitionSpec = popTransitionSpec,
+        predictivePopTransitionSpec = predictivePopTransitionSpec,
+    )
 }

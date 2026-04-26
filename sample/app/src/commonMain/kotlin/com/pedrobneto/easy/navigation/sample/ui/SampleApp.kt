@@ -10,7 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.pedrobneto.easy.navigation.core.Navigation
 import com.pedrobneto.easy.navigation.core.adaptive.AdaptiveSceneStrategy
-import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategy
+import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategies
 import com.pedrobneto.easy.navigation.registry.AppDirectionRegistry
 import com.pedrobneto.easy.navigation.sample.model.HomeRoute
 import com.pedrobneto.easy.navigation.sample.model.Orientation
@@ -54,7 +54,7 @@ fun NavigationSample() {
             modifier = Modifier.fillMaxSize(),
             initialRoute = initialRoute,
             directionRegistries = registries,
-            sceneStrategy = rememberAdaptiveSceneStrategy(
+            sceneStrategies = rememberAdaptiveSceneStrategies(
                 isUsingAdaptiveLayout = isUsingAdaptiveLayout,
                 orientation = orientation
             )

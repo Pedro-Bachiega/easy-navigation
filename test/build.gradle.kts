@@ -3,4 +3,6 @@ plugins {
     id("plugin-multiplatform-publish")
 }
 
-android.namespace = "com.pedrobneto.easy.navigation.test"
+kotlin {
+    android.namespace = "com.pedrobneto.easy.navigation.test"
+}

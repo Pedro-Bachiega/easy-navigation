@@ -17,6 +17,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
+import androidx.navigation3.ui.NavDisplay
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 
@@ -30,11 +31,40 @@ fun rememberAdaptiveSceneStrategy(
         previous: NavEntry<NavigationRoute>
     ) -> Unit = { _, _ -> }
 ): SceneStrategy<NavigationRoute> {
+    val strategies = rememberAdaptiveSceneStrategies(
+        isUsingAdaptiveLayout = isUsingAdaptiveLayout,
+        orientation = orientation,
+        divider = divider
+    )
+    return remember(strategies) {
+        SceneStrategy { entries ->
+            strategies.firstNotNullOfOrNull { strategy ->
+                with(strategy) { calculateScene(entries) }
+            }
+        }
+    }
+}
+
+/**
+ * Creates the ordered scene strategies used by [NavDisplay] for adaptive navigation.
+ */
+@ExperimentalMaterial3AdaptiveApi
+@Composable
+fun rememberAdaptiveSceneStrategies(
+    isUsingAdaptiveLayout: Boolean = true,
+    orientation: AdaptiveSceneStrategy.Orientation = AdaptiveSceneStrategy.Orientation.Horizontal,
+    divider: @Composable (
+        current: NavEntry<NavigationRoute>,
+        previous: NavEntry<NavigationRoute>
+    ) -> Unit = { _, _ -> }
+): List<SceneStrategy<NavigationRoute>> {
     val listDetailStrategy = rememberListDetailSceneStrategy<NavigationRoute>()
     val adaptiveSceneStrategy = remember(isUsingAdaptiveLayout, orientation, divider) {
         AdaptiveSceneStrategy(isUsingAdaptiveLayout, orientation, divider)
     }
-    return adaptiveSceneStrategy then listDetailStrategy
+    return remember(adaptiveSceneStrategy, listDetailStrategy) {
+        listOf(adaptiveSceneStrategy, listDetailStrategy)
+    }
 }
 
 /**

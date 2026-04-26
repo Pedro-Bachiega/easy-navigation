@@ -79,14 +79,14 @@ You declare the desired strategy using the following annotations on your route c
 
 #### AdaptiveSceneStrategy
 
-To enable this functionality, you must provide the `Navigation` composable with an `AdaptiveSceneStrategy`. This strategy automatically calculates whether to show a single pane or a dual-pane layout based on the annotations of the current and previous destinations.
+To enable this functionality, you must provide the `Navigation` composable with adaptive scene strategies. These strategies automatically calculate whether to show a single pane or a dual-pane layout based on the annotations of the current and previous destinations.
 
 ```kotlin
-import com.pedrobneto.easy.navigation.core.adaptive.AdaptiveSceneStrategy
+import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategies
 
 Navigation(
     // ...
-    sceneStrategy = AdaptiveSceneStrategy(),
+    sceneStrategies = rememberAdaptiveSceneStrategies(),
 )
 ```
 
@@ -129,13 +129,14 @@ fun Navigation(
     modifier: Modifier,
     initialRoute: NavigationRoute,
     directionRegistries: List<DirectionRegistry>,
+    controller: NavigationController = rememberNavigationController(...),
     // Optional parameters for adaptive layouts, transitions, etc.
-    sceneStrategy: SceneStrategy<NavigationRoute> = ...,
+    sceneStrategies: List<SceneStrategy<NavigationRoute>> = ...,
     // ... and more
 )
 ```
 
-It creates the `NavigationController`, provides it to the UI tree, and renders the current destination using `NavHost`.
+It provides the `NavigationController` to the UI tree and renders the current destination using `NavDisplay`.
 
 ### LaunchStrategy
 
@@ -251,10 +252,10 @@ fun DetailsScreen(route: DetailsRoute) {
 
 ### 5. Set up the Navigation root
 
-In your main `App` composable, wrap your UI in the `Navigation` composable. To enable adaptive layouts, provide the `AdaptiveSceneStrategy`.
+In your main `App` composable, wrap your UI in the `Navigation` composable. To enable adaptive layouts, provide the adaptive scene strategies.
 
 ```kotlin
-import com.pedrobneto.easy.navigation.core.adaptive.AdaptiveSceneStrategy
+import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategies
 import com.pedrobneto.easy.navigation.registry.GlobalDirectionRegistry // Generated
 
 @Composable
@@ -264,7 +265,7 @@ fun App() {
             modifier = Modifier.fillMaxSize(),
             initialRoute = HomeRoute,
             directionRegistries = remember { listOf(GlobalDirectionRegistry) },
-            sceneStrategy = AdaptiveSceneStrategy() // Enable adaptive layouts
+            sceneStrategies = rememberAdaptiveSceneStrategies()
         )
     }
 }
