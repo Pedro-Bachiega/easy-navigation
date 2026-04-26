@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.google.ksp)
     alias(libs.plugins.jetbrains.serialization)
     alias(libs.plugins.easy.navigation.library)
-    alias(libs.plugins.easy.navigation.application)
 }
 
 android.namespace = "com.pedrobneto.easy.navigation.sample"

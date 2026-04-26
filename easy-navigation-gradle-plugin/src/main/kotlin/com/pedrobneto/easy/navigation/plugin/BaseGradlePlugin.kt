@@ -11,6 +11,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import java.util.Locale
 import kotlin.reflect.full.declaredMemberProperties
 
+private const val PLUGIN_VERSION = "0.0.1-alpha09"
+
 abstract class BaseGradlePlugin : Plugin<Project> {
     protected abstract val commonMainOnly: Boolean
     protected abstract val processor: String
@@ -57,7 +59,7 @@ abstract class BaseGradlePlugin : Plugin<Project> {
         }
 
         val dependency =
-            "io.github.pedro-bachiega:easy-navigation-$processor-processor:0.0.1-alpha08"
+            "io.github.pedro-bachiega:easy-navigation-$processor-processor:$PLUGIN_VERSION"
         when (val kotlinExtension = kotlinExtension) {
             is KotlinSingleTargetExtension<*> -> {
                 dependencies.add("ksp", dependency)
@@ -95,11 +97,6 @@ abstract class BaseGradlePlugin : Plugin<Project> {
             }
         }
     }
-}
-
-internal class ApplicationGradlePlugin : BaseGradlePlugin() {
-    override val commonMainOnly: Boolean = true
-    override val processor: String = "application"
 }
 
 internal class LibraryGradlePlugin : BaseGradlePlugin() {

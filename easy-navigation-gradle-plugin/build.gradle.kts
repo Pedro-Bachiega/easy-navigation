@@ -27,23 +27,6 @@ gradlePlugin {
     vcsUrl = providers.gradleProperty("POM_SCM_URL")
 
     plugins {
-        create("applicationPlugin") {
-            id = "io.github.pedro-bachiega.easy-navigation-application"
-            displayName = "Easy-Navigation Application Gradle Plugin"
-            description =
-                "Aggregate all module DirectionRegistries into a single GlobalDirectionRegistry :)"
-            implementationClass = "com.pedrobneto.easy.navigation.plugin.ApplicationGradlePlugin"
-            tags = listOf(
-                "application",
-                "easy-navigation",
-                "easy-navigation-application",
-                "easy",
-                "google",
-                "jetpack",
-                "navigation",
-                "navigation3",
-            )
-        }
         create("libraryPlugin") {
             id = "io.github.pedro-bachiega.easy-navigation-library"
             displayName = "Easy-Navigation Library Gradle Plugin"
