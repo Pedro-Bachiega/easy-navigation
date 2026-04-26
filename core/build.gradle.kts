@@ -2,6 +2,7 @@ plugins {
     id("plugin-multiplatform-library")
     id("plugin-multiplatform-publish")
     id("plugin-compose")
+    id("plugin-test")
 }
 
 android.namespace = "com.pedrobneto.easy.navigation.core"

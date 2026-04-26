@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import com.pedrobneto.easy.navigation.core.Navigation
 import com.pedrobneto.easy.navigation.core.adaptive.AdaptiveSceneStrategy
 import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategy
-import com.pedrobneto.easy.navigation.registry.GlobalDirectionRegistry
+import com.pedrobneto.easy.navigation.registry.AppDirectionRegistry
 import com.pedrobneto.easy.navigation.sample.model.HomeRoute
 import com.pedrobneto.easy.navigation.sample.model.Orientation
 import com.pedrobneto.easy.navigation.sample.model.WindowSize
@@ -40,19 +40,14 @@ fun NavigationSample() {
             }
         }
 
-        // Generated per scope using @Scope annotation
+        // Generated per scope using @Scope annotation and the gradle plugin
 //            val (initialRoute, registries) = remember {
 //                FirstScopedRoute to listOf(SampleScopeDirectionRegistry)
 //            }
 
-        // Generated per module using library gradle plugin
-//            val (initialRoute, registries) = remember {
-//                HomeRoute to listOf(SampleDirectionRegistry)
-//            }
-
-        // Generated aggregating all modules' registries using application gradle plugin
+        // Generated per module using the gradle plugin
         val (initialRoute, registries) = remember {
-            HomeRoute to listOf(GlobalDirectionRegistry)
+            HomeRoute to listOf(AppDirectionRegistry)
         }
 
         Navigation(

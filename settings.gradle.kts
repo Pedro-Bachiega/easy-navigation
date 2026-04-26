@@ -23,8 +23,7 @@ includeBuild("kmp-build-plugin")
 include(
     ":core",
     ":easy-navigation-gradle-plugin",
-    ":processor:application",
-    ":processor:library",
+    ":processor",
     ":sample:app",
     ":sample:target:desktop",
     ":test",
