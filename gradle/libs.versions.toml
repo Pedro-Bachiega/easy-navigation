@@ -32,7 +32,7 @@ jetbrains-serialization = "1.11.0"
 google-ksp = "2.3.6"
 
 ## Gradle
-easy-navigation = "0.0.1-alpha06"
+easy-navigation = "0.0.1-alpha09"
 gradle-publish = "2.1.1"
 vanniktech-publish = "0.36.0"
 
