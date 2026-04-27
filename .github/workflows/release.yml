@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Tag And Publish Release
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    env:
+      ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_GRADLE_PROJECT_mavenCentralUsername }}
+      ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_mavenCentralPassword }}
+      ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKey }}
+      ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKeyId }}
+      ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKeyPassword }}
+      GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+      GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Validate release branch and version
+        id: version
+        run: bash .github/scripts/validate-release-version.sh "${{ github.event.pull_request.head.ref }}"
+
+      - name: Create and push tag
+        id: tag
+        run: bash .github/scripts/create-release-tag.sh "${{ steps.version.outputs.version }}"
+
+      - name: Verify tag-based version
+        run: bash .github/scripts/verify-tag-version.sh "${{ steps.version.outputs.version }}"
+
+      - name: Run checks
+        run: ./gradlew check --no-daemon
+
+      - name: Publish Maven Central artifacts
+        run: ./gradlew :core:publishAndReleaseToMavenCentral :processor:publishAndReleaseToMavenCentral :test:publishAndReleaseToMavenCentral --no-daemon
+
+      - name: Publish Gradle Plugin Portal artifact
+        run: ./gradlew :easy-navigation-gradle-plugin:publishPlugins --no-daemon
+
+      - name: Delete created tag after failure
+        if: failure() && steps.tag.outputs.created == 'true'
+        run: bash .github/scripts/delete-release-tag.sh "${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        env:
+          RELEASE_TITLE: ${{ github.event.pull_request.title }}
+        run: bash .github/scripts/create-github-release.sh "${{ steps.version.outputs.version }}"
