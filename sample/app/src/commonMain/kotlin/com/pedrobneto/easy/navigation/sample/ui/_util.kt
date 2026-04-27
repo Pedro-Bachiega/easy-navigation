@@ -81,4 +81,9 @@ internal object SampleColors {
     val OnCoral = Color(0xFFFFFFFF)
     val Sun = Color(0xFFFFD57A)
     val SoftBlue = Color(0xFFE6EEF6)
+    val Night = Color(0xFF111827)
+    val NightSurface = Color(0xFF1F2937)
+    val NightVariant = Color(0xFF334155)
+    val NightInk = Color(0xFFF8FAFC)
+    val NightMuted = Color(0xFFCBD5E1)
 }

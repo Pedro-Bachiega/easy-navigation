@@ -91,6 +91,7 @@ class NavigationController internal constructor(
     private val directionRegistryList: List<DirectionRegistry>,
     @PublishedApi internal val json: Json,
     private val parentController: NavigationController? = null,
+    private val parentRoute: NavigationRoute? = parentController?.currentRoute,
 ) {
     @PublishedApi
     internal val directions: List<NavigationDirection> =
@@ -310,9 +311,24 @@ class NavigationController internal constructor(
 
         when {
             shouldClose -> {
-                if (parentController != null && !canNavigateUp && parentController.canNavigateUp) {
-                    parentController.navigateUp()
-                    return
+                if (parentController != null && !canNavigateUp) {
+                    val routeToRestore = parentRoute
+                    val parentRouteIndex = routeToRestore?.let {
+                        parentController.backStack.indexOfLast { route -> route == it }
+                    } ?: -1
+
+                    if (routeToRestore != null &&
+                        parentRouteIndex >= 0 &&
+                        parentController.currentRoute != routeToRestore
+                    ) {
+                        parentController.popUpTo(routeToRestore)
+                        return
+                    }
+
+                    if (parentController.canNavigateUp) {
+                        parentController.navigateUp()
+                        return
+                    }
                 }
 
                 val message = "Not a nested navigation. Cannot pop root destination."

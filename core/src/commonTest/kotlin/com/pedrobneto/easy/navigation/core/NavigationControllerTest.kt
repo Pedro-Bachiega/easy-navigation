@@ -77,6 +77,26 @@ class NavigationControllerTest {
         },
         object : NavigationDirection(
             deeplinks = emptyList(),
+            routeClass = TestExtraDetailsRoute::class
+        ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
+            @Composable
+            override fun Draw(route: NavigationRoute) {
+            }
+        },
+        object : NavigationDirection(
+            deeplinks = emptyList(),
+            routeClass = TestNestedRoute::class
+        ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
+            @Composable
+            override fun Draw(route: NavigationRoute) {
+            }
+        },
+        object : NavigationDirection(
+            deeplinks = emptyList(),
             routeClass = TestHomeWithParameterizedParentClass::class,
             parentRouteClass = TestDetailsRoute::class
         ) {
@@ -186,6 +206,31 @@ class NavigationControllerTest {
         assertEquals(TestDetailsRoute(42), childController.backStack.last())
         assertEquals(1, parentController.backStack.size)
         assertEquals(TestHomeRoute, parentController.backStack.last())
+    }
+
+    @Test
+    fun `navigateUp from nested root restores parent route when parent moved past host destination`() {
+        val parentController = NavigationController(
+            backStack = NavBackStack(mutableStateListOf(TestHomeRoute, TestDetailsRoute(42))),
+            directionRegistryList = listOf(testRegistry),
+            json = Json { ignoreUnknownKeys = true }
+        )
+        val childController = NavigationController(
+            backStack = NavBackStack(mutableStateListOf(TestNestedRoute(42))),
+            directionRegistryList = listOf(testRegistry),
+            parentController = parentController,
+            json = Json { ignoreUnknownKeys = true }
+        )
+
+        parentController.navigateTo(TestExtraDetailsRoute)
+        parentController.navigateTo(TestSettingsRoute)
+
+        childController.navigateUp()
+
+        assertEquals(1, childController.backStack.size)
+        assertEquals(TestNestedRoute(42), childController.backStack.last())
+        assertEquals(2, parentController.backStack.size)
+        assertEquals(TestDetailsRoute(42), parentController.backStack.last())
     }
 
     @Test
@@ -472,6 +517,12 @@ class NavigationControllerTest {
 
     @Serializable
     data object TestSettingsRoute : NavigationRoute
+
+    @Serializable
+    data object TestExtraDetailsRoute : NavigationRoute
+
+    @Serializable
+    data class TestNestedRoute(val id: Long) : NavigationRoute
 
     @Serializable
     data object UnregisteredRoute : NavigationRoute
