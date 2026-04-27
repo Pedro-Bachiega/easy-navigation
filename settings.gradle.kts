@@ -5,6 +5,9 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 pluginManagement {
     apply(from = "$rootDir/kmp-build-plugin/repositories.gradle.kts")
     val repositoryList: RepositoryHandler.() -> Unit by extra
+    includeBuild("easy-navigation-gradle-plugin") {
+        name = "easy-navigation-gradle-plugin-build"
+    }
     repositories(repositoryList)
 }
 
