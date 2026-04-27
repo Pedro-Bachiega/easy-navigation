@@ -1,4 +1,5 @@
 plugins {
+    `maven-publish`
     id("java-gradle-plugin")
     alias(libs.plugins.jetbrains.kotlin.dsl)
     alias(libs.plugins.jetbrains.kotlin.jvm)
@@ -6,6 +7,10 @@ plugins {
 }
 
 apply(from = "$rootDir/versioning.gradle.kts")
+
+base {
+    archivesName = "easy-navigation-library"
+}
 
 kotlin { jvmToolchain(21) }
 
@@ -19,6 +24,22 @@ sourceSets {
     main {
         java { srcDirs("src/main/java") }
         kotlin { srcDirs("src/main/kotlin") }
+    }
+}
+
+tasks.processResources {
+    val pluginVersion = project.version.toString()
+    inputs.property("pluginVersion", pluginVersion)
+    filesMatching("easy-navigation-plugin.properties") {
+        expand("pluginVersion" to pluginVersion)
+    }
+}
+
+publishing {
+    publications.withType<MavenPublication>().configureEach {
+        if (name == "pluginMaven") {
+            artifactId = "easy-navigation-library"
+        }
     }
 }
 

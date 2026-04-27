@@ -11,7 +11,16 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import java.util.Locale
 import kotlin.reflect.full.declaredMemberProperties
 
-private const val PLUGIN_VERSION = "0.0.1-beta01"
+private val PLUGIN_VERSION: String by lazy {
+    BaseGradlePlugin::class.java.classLoader
+        .getResourceAsStream("easy-navigation-plugin.properties")
+        ?.use { stream ->
+            java.util.Properties().apply { load(stream) }
+        }
+        ?.getProperty("version")
+        ?.takeIf { it.isNotBlank() }
+        ?: error("Could not load Easy Navigation Gradle plugin version.")
+}
 
 abstract class BaseGradlePlugin : Plugin<Project> {
     protected abstract val commonMainOnly: Boolean
