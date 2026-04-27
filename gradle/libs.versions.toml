@@ -30,9 +30,10 @@ jetbrains-serialization = "1.11.0"
 
 ## Google
 google-ksp = "2.3.6"
+kotlinpoet = "2.3.0"
 
 ## Gradle
-easy-navigation = "0.0.1-beta02"
+easy-navigation = "0.0.1-beta03"
 gradle-publish = "2.1.1"
 vanniktech-publish = "0.36.0"
 
@@ -69,6 +70,8 @@ toolkit-arch-lumber = { group = "io.github.matheus-corregiari", name = "arch-lum
 
 ## Tools
 google-ksp = { group = "com.google.devtools.ksp", name = "symbol-processing-api", version.ref = "google-ksp" }
+kotlinpoet = { group = "com.squareup", name = "kotlinpoet", version.ref = "kotlinpoet" }
+kotlinpoet-ksp = { group = "com.squareup", name = "kotlinpoet-ksp", version.ref = "kotlinpoet" }
 lint-detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-formatting", version.ref = "detekt" }
 
 ## Testing

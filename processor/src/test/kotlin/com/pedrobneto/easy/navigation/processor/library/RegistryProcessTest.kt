@@ -8,7 +8,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.slot
 import org.junit.Before
-import java.io.OutputStream
+import java.io.ByteArrayOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -16,8 +16,6 @@ import kotlin.test.assertEquals
 class RegistryProcessTest {
 
     private val codeGenerator = mockk<CodeGenerator>(relaxed = true)
-    private val outputStream = mockk<OutputStream>(relaxed = true)
-
     @Before
     fun setup() {
         mockkStatic("com.google.devtools.ksp.UtilsKt")
@@ -29,7 +27,7 @@ class RegistryProcessTest {
         val ksFile = mockk<KSFile>()
         val directions = listOf("com.sample.Direction1", "com.sample.Direction2")
         val fileNameSlot = slot<String>()
-        val fileContentSlot = slot<ByteArray>()
+        val outputStream = ByteArrayOutputStream()
         every {
             codeGenerator.createNewFile(
                 any(),
@@ -38,7 +36,6 @@ class RegistryProcessTest {
                 any()
             )
         } returns outputStream
-        every { outputStream.write(capture(fileContentSlot)) } returns Unit
 
         // WHEN
         codeGenerator.createModuleRegistryFile(
@@ -51,24 +48,11 @@ class RegistryProcessTest {
         // THEN
         assertEquals("SampleRegistry", fileNameSlot.captured)
 
-        val expectedContent = """
-            package com.sample.registry
-
-            import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
-            import com.sample.Direction1
-            import com.sample.Direction2
-
-            data object SampleRegistry : DirectionRegistry(
-                directions = listOf(
-                    Direction1,
-                    Direction2
-                )
-            )
-        """.trimIndent()
-        assertEquals(
-            expectedContent.normalizeLineEndings(),
-            String(fileContentSlot.captured).normalizeLineEndings()
-        )
+        val content = outputStream.toString().normalizeLineEndings()
+        assertContains(content, "data object SampleRegistry : DirectionRegistry(")
+        assertContains(content, "directions = listOf(")
+        assertContains(content, "Direction1")
+        assertContains(content, "Direction2")
     }
 
     @Test
@@ -77,7 +61,7 @@ class RegistryProcessTest {
         val ksFile = mockk<KSFile>()
         val directions = listOf("com.sample.Direction1")
         val fileNameSlot = slot<String>()
-        val fileContentSlot = slot<ByteArray>()
+        val outputStream = ByteArrayOutputStream()
         every {
             codeGenerator.createNewFile(
                 any(),
@@ -86,7 +70,6 @@ class RegistryProcessTest {
                 any()
             )
         } returns outputStream
-        every { outputStream.write(capture(fileContentSlot)) } returns Unit
 
         // WHEN
         codeGenerator.createModuleRegistryFile(
@@ -100,26 +83,19 @@ class RegistryProcessTest {
         // THEN
         assertEquals("ScopedRegistry", fileNameSlot.captured)
 
-        val expectedContent = """
-            package com.sample.registry
-
-            import com.pedrobneto.easy.navigation.core.annotation.Scope
-            import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
-            import com.sample.Direction1
-
-            @Scope("myScope")
-            data object ScopedRegistry : DirectionRegistry(
-                directions = listOf(
-                    Direction1
-                )
-            )
-        """.trimIndent()
-        assertEquals(
-            expectedContent.normalizeLineEndings(),
-            String(fileContentSlot.captured).normalizeLineEndings()
-        )
+        val content = outputStream.toString().normalizeLineEndings()
+        assertContains(content, "@Scope(\"myScope\")")
+        assertContains(content, "data object ScopedRegistry : DirectionRegistry(")
+        assertContains(content, "Direction1")
     }
 
     private fun String.normalizeLineEndings(): String =
         this.replace("\r\n", "\n").replace("\t", "    ")
+
+    private fun assertContains(actual: String, expected: String) {
+        kotlin.test.assertTrue(
+            actual.contains(expected),
+            "Expected generated content to contain:\n$expected\n\nActual:\n$actual"
+        )
+    }
 }

@@ -44,6 +44,9 @@ dependencies {
     implementation(libs.toolkit.arch.lumber)
     // Google
     implementation(libs.google.ksp)
+    // Square
+    implementation(libs.kotlinpoet)
+    implementation(libs.kotlinpoet.ksp)
 
     testImplementation(libs.test.mockk)
     testImplementation(libs.jetbrains.compose.navigation3.ui)

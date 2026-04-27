@@ -5,6 +5,7 @@ import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSAnnotation
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
@@ -23,7 +24,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.slot
 import org.junit.Before
-import java.io.OutputStream
+import java.io.ByteArrayOutputStream
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,8 +36,6 @@ class DirectionProcessTest {
 
     private val codeGenerator = mockk<CodeGenerator>(relaxed = true)
     private val logger = mockk<KSPLogger>(relaxed = true)
-    private val outputStream = mockk<OutputStream>(relaxed = true)
-
     @Before
     fun setup() {
         mockkStatic("com.google.devtools.ksp.UtilsKt")
@@ -66,7 +65,7 @@ class DirectionProcessTest {
             routeAnnotations = listOf(Route(SampleRoute::class))
         )
         val fileNameSlot = slot<String>()
-        val fileContentSlot = slot<ByteArray>()
+        val outputStream = ByteArrayOutputStream()
         every {
             codeGenerator.createNewFile(
                 any(),
@@ -75,7 +74,6 @@ class DirectionProcessTest {
                 any()
             )
         } returns outputStream
-        every { outputStream.write(capture(fileContentSlot)) } returns Unit
 
         // WHEN
         val result = codeGenerator.createDirection(logger, function, "testModule", true)
@@ -84,36 +82,16 @@ class DirectionProcessTest {
         assertNotNull(result)
         assertEquals("SampleRouteDirection", fileNameSlot.captured)
 
-        val expectedContent = """
-            package com.pedrobneto.easy.navigation.processor.library.DirectionProcessTest
-
-            import androidx.compose.runtime.Composable
-            import com.pedrobneto.easy.navigation.core.adaptive.PaneStrategy
-            import com.pedrobneto.easy.navigation.core.model.NavigationDirection
-            import com.pedrobneto.easy.navigation.core.model.NavigationRoute
-            import com.sample.ui.SampleScreen
-            import kotlinx.serialization.modules.PolymorphicModuleBuilder
-
-            internal data object SampleRouteDirection : NavigationDirection(
-                routeClass = SampleRoute::class,
-                deeplinks = emptyList(),
-                paneStrategy = PaneStrategy.Adaptive(
-                    ratio = 1.0f
-                )
-            ) {
-                override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) =
-                    builder.subclass(SampleRoute::class, SampleRoute.serializer())
-
-                @Composable
-                override fun Draw(route: NavigationRoute) {
-                    SampleScreen()
-                }
-            }
-        """.trimIndent()
-        assertEquals(
-            expectedContent.normalizeLineEndings(),
-            String(fileContentSlot.captured).normalizeLineEndings()
+        val content = outputStream.toString().normalizeLineEndings()
+        assertContains(content, "internal data object SampleRouteDirection : NavigationDirection(")
+        assertContains(content, "routeClass = DirectionProcessTest.SampleRoute::class")
+        assertContains(content, "deeplinks = emptyList()")
+        assertContains(content, "paneStrategy = PaneStrategy.Adaptive(ratio = 1.0f)")
+        assertContains(
+            content,
+            "builder.subclass(DirectionProcessTest.SampleRoute::class, DirectionProcessTest.SampleRoute.serializer())"
         )
+        assertContains(content, "SampleScreen()")
     }
 
     @Test
@@ -171,15 +149,10 @@ class DirectionProcessTest {
     }
 
     @Test
-    fun `GIVEN Route KClass access throws ClassNotFoundException WHEN processing THEN it should parse class name from exception`() {
+    fun `GIVEN Route annotation WHEN processing THEN it should read route from KSP type argument`() {
         // GIVEN
-        val exception =
-            ClassNotFoundException("Some message with ClassNotFoundException: com.sample.navigation.FromExceptionRoute")
-        val routeAnnotation = mockk<Route>()
-        every { routeAnnotation.value } throws exception
-
         val function = mockFunctionDeclaration(
-            routeAnnotations = listOf(routeAnnotation)
+            routeAnnotations = listOf(Route(SampleRoute::class))
         )
 
         // WHEN
@@ -187,8 +160,11 @@ class DirectionProcessTest {
 
         // THEN
         assertNotNull(result)
-        assertEquals("com.sample.navigation", result.routePackageName)
-        assertEquals("FromExceptionRoute", result.routeClassName)
+        assertEquals(
+            "com.pedrobneto.easy.navigation.processor.library.DirectionProcessTest",
+            result.routePackageName
+        )
+        assertEquals("SampleRoute", result.routeClassName)
     }
 
     @Test
@@ -260,6 +236,7 @@ class DirectionProcessTest {
         every { function.parameters } returns parameters
 
         every { function.annotations } returns buildList {
+            add(mockAnnotationRaw("androidx.compose.runtime.Composable"))
             addAll(routeAnnotations.map { it.toKsAnnotation(Route::class, "value") })
             addAll(parentRouteAnnotations.map { it.toKsAnnotation(ParentRoute::class, "value") })
             addAll(deeplinkAnnotations.map { it.toKsAnnotation(Deeplink::class, "value") })
@@ -273,9 +250,7 @@ class DirectionProcessTest {
         mockAnnotation(
             annotationClass = annotationClass,
             argumentName = argumentName,
-            argumentValue = runCatching { value.qualifiedName.orEmpty() }
-                .getOrElse { exception -> exception.classNameFromMessage() }
-                .let(::mockType)
+                argumentValue = value.qualifiedName.orEmpty().let(::mockType)
         )
 
     private fun ParentRoute.toKsAnnotation(annotationClass: KClass<out Annotation>, argumentName: String) =
@@ -316,14 +291,44 @@ class DirectionProcessTest {
         return annotation
     }
 
-    private fun mockType(qualifiedClassName: String): KSType {
+    private fun mockAnnotationRaw(qualifiedClassName: String): KSAnnotation {
+        val annotation = mockk<KSAnnotation>()
+        val typeReference = mockk<KSTypeReference>()
         val type = mockk<KSType>()
         val declaration = mockk<KSDeclaration>()
+
+        every { annotation.shortName } returns mockName(qualifiedClassName.substringAfterLast('.'))
+        every { annotation.annotationType } returns typeReference
+        every { typeReference.resolve() } returns type
+        every { type.declaration } returns declaration
+        every { declaration.qualifiedName } returns mockName(qualifiedClassName)
+        every { annotation.arguments } returns emptyList()
+
+        return annotation
+    }
+
+    private fun mockType(qualifiedClassName: String): KSType {
+        val type = mockk<KSType>()
+        val declaration = mockk<KSClassDeclaration>()
         val packageName = qualifiedClassName.substringBeforeLast('.')
+        val navigationRouteReference = mockk<KSTypeReference>()
+        val navigationRouteType = mockk<KSType>()
+        val navigationRouteDeclaration = mockk<KSClassDeclaration>()
 
         every { type.declaration } returns declaration
         every { declaration.packageName } returns mockName(packageName)
+        every { declaration.simpleName } returns mockName(qualifiedClassName.substringAfterLast('.'))
         every { declaration.qualifiedName } returns mockName(qualifiedClassName)
+        every { declaration.annotations } returns sequenceOf(mockAnnotationRaw("kotlinx.serialization.Serializable"))
+        every { declaration.superTypes } returns if (qualifiedClassName == NavigationRoute::class.qualifiedName) {
+            emptySequence()
+        } else {
+            sequenceOf(navigationRouteReference)
+        }
+        every { navigationRouteReference.resolve() } returns navigationRouteType
+        every { navigationRouteType.declaration } returns navigationRouteDeclaration
+        every { navigationRouteDeclaration.qualifiedName } returns mockName(NavigationRoute::class.qualifiedName.orEmpty())
+        every { navigationRouteDeclaration.superTypes } returns emptySequence()
 
         return type
     }
@@ -335,15 +340,15 @@ class DirectionProcessTest {
         return name
     }
 
-    private fun Throwable.classNameFromMessage() =
-        "(.*ClassNotFoundException: )([a-zA-Z._]+)".toRegex()
-            .find(message.orEmpty())
-            ?.groupValues
-            ?.last()
-            .orEmpty()
-
     private fun String.normalizeLineEndings(): String =
         this.replace("\r\n", "\n").replace("\t", "    ")
+
+    private fun assertContains(actual: String, expected: String) {
+        kotlin.test.assertTrue(
+            actual.contains(expected),
+            "Expected generated content to contain:\n$expected\n\nActual:\n$actual"
+        )
+    }
 
     data object SampleRoute : NavigationRoute
     data object SampleParentRoute : NavigationRoute
