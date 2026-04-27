@@ -1,6 +1,7 @@
 package com.pedrobneto.easy.navigation.sample.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
@@ -19,7 +20,24 @@ import com.pedrobneto.easy.navigation.sample.model.WindowSize
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun NavigationSample() {
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = lightColorScheme(
+            primary = SampleColors.Ocean,
+            onPrimary = SampleColors.OnOcean,
+            primaryContainer = SampleColors.Mint,
+            onPrimaryContainer = SampleColors.DeepInk,
+            secondary = SampleColors.Coral,
+            onSecondary = SampleColors.OnCoral,
+            secondaryContainer = SampleColors.Sun,
+            onSecondaryContainer = SampleColors.DeepInk,
+            background = SampleColors.Canvas,
+            onBackground = SampleColors.DeepInk,
+            surface = SampleColors.Surface,
+            onSurface = SampleColors.DeepInk,
+            surfaceVariant = SampleColors.SoftBlue,
+            onSurfaceVariant = SampleColors.MutedInk,
+        )
+    ) {
         val screenInfo by getCurrentScreenInfo()
         if (!screenInfo.isValid) return@MaterialTheme
 

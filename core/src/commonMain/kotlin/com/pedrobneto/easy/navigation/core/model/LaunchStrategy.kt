@@ -1,6 +1,5 @@
 package com.pedrobneto.easy.navigation.core.model
 
-import androidx.compose.runtime.mutableStateListOf
 import com.pedrobneto.easy.navigation.core.NavigationController
 import com.pedrobneto.easy.navigation.core.extension.removeRange
 
@@ -29,7 +28,7 @@ sealed class LaunchStrategy {
      * The `SingleTop` launch strategy affects how a destination is handled when it's already
      * present in the back stack.
      *
-     * If there's a single instance of the destination and it is already at the top of the stack, it's replaced by the
+     * If there's a single instance of the destination, and it is already at the top of the stack, it's replaced by the
      * new instance. This is useful for updating the current screen with new arguments without
      * pushing a new copy onto the stack.
      *

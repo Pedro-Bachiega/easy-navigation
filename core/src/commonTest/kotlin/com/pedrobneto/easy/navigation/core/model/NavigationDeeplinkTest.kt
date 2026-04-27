@@ -127,6 +127,29 @@ class NavigationDeeplinkTest {
     }
 
     @Test
+    fun `resolve deeplink with payload keeps query parameters and lets payload override duplicates`() {
+        val deeplink = NavigationDeeplink("/details/101?source=query&campaign=spring")
+        val route = deeplink.resolve(
+            json = json,
+            directions = testDirections,
+            extras = TestPayload(source = "payload")
+        ) as TestDetailsRoute
+
+        assertEquals(101L, route.id)
+        assertEquals("payload", route.source)
+        assertEquals("spring", route.campaign)
+    }
+
+    @Test
+    fun `resolve deeplink with primitive payload throws`() {
+        val deeplink = NavigationDeeplink("/details/101")
+
+        assertFailsWith<IllegalArgumentException> {
+            deeplink.resolve(json, testDirections, "not-an-object")
+        }
+    }
+
+    @Test
     fun `resolve deeplink with scheme`() {
         val deeplink = NavigationDeeplink("app://user/pedro.bneto")
         val route = deeplink.resolve(json, testDirections) as TestUserRoute
@@ -155,7 +178,14 @@ class NavigationDeeplinkTest {
     data object TestHomeRoute : NavigationRoute
 
     @Serializable
-    data class TestDetailsRoute(val id: Long, val source: String = "default") : NavigationRoute
+    data class TestDetailsRoute(
+        val id: Long,
+        val source: String = "default",
+        val campaign: String = "none",
+    ) : NavigationRoute
+
+    @Serializable
+    data class TestPayload(val source: String)
 
     @Serializable
     data class TestUserRoute(val userId: String) : NavigationRoute

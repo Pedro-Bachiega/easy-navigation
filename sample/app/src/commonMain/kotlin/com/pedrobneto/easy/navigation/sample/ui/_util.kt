@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import com.pedrobneto.easy.navigation.sample.model.Orientation
@@ -67,3 +68,17 @@ private val WindowSizeClass.portraitScreenSize: WindowSize
         isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND) -> WindowSize.Medium
         else -> WindowSize.Small
     }
+
+internal object SampleColors {
+    val Canvas = Color(0xFFF6F7F2)
+    val Surface = Color(0xFFFFFFFF)
+    val DeepInk = Color(0xFF17202A)
+    val MutedInk = Color(0xFF56616D)
+    val Ocean = Color(0xFF006C67)
+    val OnOcean = Color(0xFFFFFFFF)
+    val Mint = Color(0xFFCFEDE5)
+    val Coral = Color(0xFFC64E42)
+    val OnCoral = Color(0xFFFFFFFF)
+    val Sun = Color(0xFFFFD57A)
+    val SoftBlue = Color(0xFFE6EEF6)
+}

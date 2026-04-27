@@ -10,6 +10,15 @@ data object HomeRoute : NavigationRoute
 data class DetailsRoute(val id: Long) : NavigationRoute
 
 @Serializable
+data class DetailsOverviewRoute(val id: Long) : NavigationRoute
+
+@Serializable
+data class DetailsActivityRoute(val id: Long) : NavigationRoute
+
+@Serializable
+data class DetailsFaresRoute(val id: Long) : NavigationRoute
+
+@Serializable
 data object ExtraDetailsRoute : NavigationRoute
 
 @Serializable

@@ -4,10 +4,12 @@ import br.com.arch.toolkit.lumber.Lumber
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.serializer
 import kotlin.jvm.JvmInline
 import kotlin.reflect.KClass
-import kotlin.text.get
 
 /**
  * Represents a navigation deeplink, providing structured access to its components.
@@ -92,7 +94,11 @@ value class NavigationDeeplink(val raw: String) {
      */
     @OptIn(InternalSerializationApi::class)
     @Throws(IllegalArgumentException::class)
-    fun resolve(json: Json, directions: List<NavigationDirection>): NavigationRoute {
+    fun resolve(
+        json: Json,
+        directions: List<NavigationDirection>,
+        extras: Map<String, String> = queryParams
+    ): NavigationRoute {
         var result: Pair<NavigationDeeplink, KClass<out NavigationRoute>>? = null
 
         directionsLoop@ for (direction in directions) {
@@ -107,25 +113,62 @@ value class NavigationDeeplink(val raw: String) {
         val (directionDeeplink, routeClass) = result
             ?: throw IllegalArgumentException("No route found for deeplink '$raw'")
 
-        val parametersMap = mutableMapOf("deeplink" to raw)
+        val arguments = mutableMapOf("deeplink" to raw)
 
         val pathValues = path?.split("/")
         directionDeeplink.path?.split("/")?.forEachIndexed { index, label ->
             if (label.startsWith("{") && label.endsWith("}")) {
                 val key = label.removePrefix("{").removeSuffix("}")
-                pathValues?.getOrNull(index)?.let { parametersMap[key] = it }
+                pathValues?.getOrNull(index)?.let { arguments[key] = it }
             }
         }
 
-        parametersMap.putAll(queryParams)
+        arguments.putAll(queryParams)
+        arguments.putAll(extras)
 
         return json.runCatching {
-            decodeFromString(routeClass.serializer(), encodeToString(parametersMap))
+            decodeFromString(routeClass.serializer(), encodeToString(arguments))
         }.getOrElse {
             Lumber.tag("NavigationController")
                 .error(it, "Error decoding route parameters")
             throw it
         }
+    }
+
+    /**
+     * Resolves the deeplink to a [NavigationRoute].
+     *
+     * This function searches through the provided `directions` to find a [NavigationDirection]
+     * whose deeplink pattern matches this one. It then extracts path and query parameters
+     * to construct and return the corresponding [NavigationRoute] instance.
+     *
+     * @param json The [Json] instance used for deserializing route arguments.
+     * @param directions A list of all available [NavigationDirection]s in the app.
+     * @param extras Additional route arguments to merge with path and query parameters.
+     * @return The resolved [NavigationRoute].
+     * @throws IllegalArgumentException if no matching direction is found for the deeplink or
+     * if an error occurs during the deserialization of route parameters.
+     */
+    @Throws(IllegalArgumentException::class)
+    inline fun <reified T> resolve(
+        json: Json,
+        directions: List<NavigationDirection>,
+        extras: T,
+    ): NavigationRoute {
+        val arguments = json.runCatching {
+            val jsonObject = parseToJsonElement(encodeToString(extras)) as? JsonObject
+                ?: throw IllegalArgumentException("Deeplink payload must encode to a JSON object.")
+
+            jsonObject.mapValues { (_, value) ->
+                (value as? JsonPrimitive)?.contentOrNull ?: value.toString()
+            }
+        }.getOrElse {
+            Lumber.tag("NavigationDeeplink")
+                .error(it, "Failed decoding payload.")
+            throw IllegalArgumentException("Failed decoding deeplink payload.", it)
+        }
+
+        return resolve(json, directions, arguments)
     }
 
     private fun matches(other: NavigationDeeplink): Boolean = this == other ||

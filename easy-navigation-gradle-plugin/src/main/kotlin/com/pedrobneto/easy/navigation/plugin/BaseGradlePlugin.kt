@@ -11,7 +11,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import java.util.Locale
 import kotlin.reflect.full.declaredMemberProperties
 
-private const val PLUGIN_VERSION = "0.0.1-alpha09"
+private const val PLUGIN_VERSION = "0.0.1-beta01"
 
 abstract class BaseGradlePlugin : Plugin<Project> {
     protected abstract val commonMainOnly: Boolean

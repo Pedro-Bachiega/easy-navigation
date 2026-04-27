@@ -167,6 +167,28 @@ class NavigationControllerTest {
     }
 
     @Test
+    fun `navigateUp from nested root pops parent controller when parent can navigate up`() {
+        val parentController = NavigationController(
+            backStack = NavBackStack(mutableStateListOf(TestHomeRoute, TestSettingsRoute)),
+            directionRegistryList = listOf(testRegistry),
+            json = Json { ignoreUnknownKeys = true }
+        )
+        val childController = NavigationController(
+            backStack = NavBackStack(mutableStateListOf(TestDetailsRoute(42))),
+            directionRegistryList = listOf(testRegistry),
+            parentController = parentController,
+            json = Json { ignoreUnknownKeys = true }
+        )
+
+        childController.navigateUp()
+
+        assertEquals(1, childController.backStack.size)
+        assertEquals(TestDetailsRoute(42), childController.backStack.last())
+        assertEquals(1, parentController.backStack.size)
+        assertEquals(TestHomeRoute, parentController.backStack.last())
+    }
+
+    @Test
     fun `navigateUp throws on empty back stack and parent route has parameters`() {
         controller.navigateTo(TestHomeWithParameterizedParentClass, LaunchStrategy.NewStack)
         assertEquals(1, controller.backStack.size)
@@ -253,6 +275,20 @@ class NavigationControllerTest {
     }
 
     @Test
+    fun `navigateTo deeplink with payload merges path query and payload arguments`() {
+        controller.navigateTo(
+            deeplink = "/details/42?campaign=spring",
+            payload = TestPayload(source = "push")
+        )
+
+        assertEquals(2, controller.backStack.size)
+        assertEquals(
+            TestDetailsRoute(id = 42, source = "push", campaign = "spring"),
+            controller.backStack.last()
+        )
+    }
+
+    @Test
     fun `safeNavigateTo deeplink returns true on success`() {
         assertEquals(1, controller.backStack.size)
         assertTrue(controller.safeNavigateTo("/details/42"))
@@ -271,6 +307,13 @@ class NavigationControllerTest {
     fun `safeNavigateTo deeplink returns false for malformed deeplink`() {
         assertEquals(1, controller.backStack.size)
         assertFalse(controller.safeNavigateTo("details/not-a-link"))
+        assertEquals(1, controller.backStack.size)
+    }
+
+    @Test
+    fun `safeNavigateTo deeplink with payload returns false for non object payload`() {
+        assertEquals(1, controller.backStack.size)
+        assertFalse(controller.safeNavigateTo("/details/42", "not-an-object"))
         assertEquals(1, controller.backStack.size)
     }
     // endregion
@@ -418,7 +461,14 @@ class NavigationControllerTest {
     data object TestHomeRouteWithUnresolvedParentDeeplink : NavigationRoute
 
     @Serializable
-    data class TestDetailsRoute(val id: Long) : NavigationRoute
+    data class TestDetailsRoute(
+        val id: Long,
+        val source: String = "default",
+        val campaign: String = "none",
+    ) : NavigationRoute
+
+    @Serializable
+    data class TestPayload(val source: String)
 
     @Serializable
     data object TestSettingsRoute : NavigationRoute

@@ -73,7 +73,10 @@ fun Navigation(
     predictivePopTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.(
         @NavigationEvent.SwipeEdge Int
     ) -> ContentTransform = defaultPredictivePopTransitionSpec(),
-) = CompositionLocalProvider(LocalNavigationController provides controller) {
+) = CompositionLocalProvider(
+    LocalNavigationController provides controller,
+    LocalParentNavigationController provides controller
+) {
     NavDisplay(
         modifier = modifier,
         backStack = controller.backStack,

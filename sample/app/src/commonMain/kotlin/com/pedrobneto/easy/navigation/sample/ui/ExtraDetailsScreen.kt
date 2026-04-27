@@ -1,11 +1,15 @@
 package com.pedrobneto.easy.navigation.sample.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,9 +39,10 @@ internal fun ExtraDetailsScreen() {
 
 @Composable
 private fun ExtraDetailsContent(onBackClick: () -> Unit = {}) = Scaffold(
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
         TopAppBar(
-            title = { Text("Item Details") },
+            title = { Text("More details") },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -51,12 +56,31 @@ private fun ExtraDetailsContent(onBackClick: () -> Unit = {}) = Scaffold(
             .fillMaxSize()
             .padding(paddingValues)
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("You are viewing extra details ", style = MaterialTheme.typography.bodySmall)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(8.dp))
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary
+            )
+            Text("Extra pane", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "This destination is hosted alongside details on larger windows, then behaves like a normal screen on compact layouts.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Text(
-            "This is a sample detail screen. In a real app, you would continue with your item's flow here."
+            text = "Use it for related content, supporting actions, or a preview that should stay connected to the selected route.",
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }

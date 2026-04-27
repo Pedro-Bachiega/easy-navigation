@@ -33,6 +33,10 @@ import kotlin.reflect.KClass
 val LocalNavigationController: ProvidableCompositionLocal<NavigationController> =
     staticCompositionLocalOf { error("Navigation not initialized. Make sure you have a Navigation composable in your hierarchy.") }
 
+@KoverExcludes
+internal val LocalParentNavigationController: ProvidableCompositionLocal<NavigationController?> =
+    staticCompositionLocalOf { null }
+
 /**
  * Creates and remembers a [NavigationController] instance.
  *
@@ -58,14 +62,15 @@ fun rememberNavigationController(
         prettyPrint = true
     }
 ): NavigationController {
-    val controller = remember(initialRoute, directionRegistries) {
+    val parentController = LocalParentNavigationController.current
+    return remember(initialRoute, directionRegistries) {
         NavigationController(
             backStack = backStack,
             directionRegistryList = directionRegistries,
+            parentController = parentController,
             json = json
         )
     }
-    return controller
 }
 
 /**
@@ -84,9 +89,11 @@ fun rememberNavigationController(
 class NavigationController internal constructor(
     internal val backStack: NavBackStack<NavigationRoute>,
     private val directionRegistryList: List<DirectionRegistry>,
-    private val json: Json,
+    @PublishedApi internal val json: Json,
+    private val parentController: NavigationController? = null,
 ) {
-    private val directions: List<NavigationDirection> =
+    @PublishedApi
+    internal val directions: List<NavigationDirection> =
         directionRegistryList.flatMap(DirectionRegistry::directions)
 
     internal val currentDirection: NavigationDirection
@@ -98,7 +105,7 @@ class NavigationController internal constructor(
      * to render the correct composable for each route.
      */
     internal val directionProvider: (NavigationRoute) -> NavEntry<NavigationRoute> = entryProvider {
-        directions.map { direction ->
+        directions.forEach { direction ->
             addEntryProvider(
                 clazz = direction.routeClass,
                 metadata = direction.metadata,
@@ -106,6 +113,13 @@ class NavigationController internal constructor(
             )
         }
     }
+
+    /**
+     * Indicates whether we have a parent route to navigate to or not.
+     *
+     * `true` if [currentIndex] is not `0`.
+     */
+    val canNavigateUp: Boolean get() = currentIndex > 0
 
     /**
      * The current route in the navigation back stack.
@@ -133,7 +147,6 @@ class NavigationController internal constructor(
     fun navigateTo(route: NavigationRoute, strategy: LaunchStrategy = LaunchStrategy.Default) =
         strategy.handleNavigation(route = route, controller = this)
 
-
     /**
      * Navigates to a destination via a deeplink URI.
      *
@@ -152,6 +165,43 @@ class NavigationController internal constructor(
             route = NavigationDeeplink(deeplink).resolve(json, directions),
             strategy = strategy
         )
+
+    /**
+     * Navigates to a destination via a deeplink URI.
+     *
+     * This method parses the deeplink to find a matching [NavigationDirection] and constructs
+     * the [NavigationRoute] with its arguments from the deeplink's query parameters.
+     *
+     * @param deeplink The deeplink URI to navigate to.
+     * @param strategy The [LaunchStrategy] to apply to this navigation action.
+     * @throws IllegalArgumentException if no direction is found for the deeplink or if the
+     * deeplink is malformed for the target route.
+     */
+    @UnsafeNavigationApi
+    @Throws(IllegalArgumentException::class)
+    inline fun <reified T> navigateTo(
+        deeplink: String,
+        payload: T,
+        strategy: LaunchStrategy = LaunchStrategy.Default
+    ) = navigateTo(
+        route = NavigationDeeplink(deeplink).resolve(json, directions, payload),
+        strategy = strategy
+    )
+
+    /**
+     * Navigates to a destination via a deeplink URI and payload.
+     *
+     * @param deeplink The deeplink URI to navigate to.
+     * @param payload Additional route arguments to merge with path and query parameters.
+     * @param strategy The [LaunchStrategy] to apply to this navigation action.
+     * @return `true` if the navigation was successful, `false` otherwise.
+     */
+    @SafeNavigationApi
+    inline fun <reified T> safeNavigateTo(
+        deeplink: String,
+        payload: T,
+        strategy: LaunchStrategy = LaunchStrategy.Default
+    ): Boolean = runCatching { navigateTo(deeplink, payload, strategy) }.isSuccess
 
     /**
      * Navigates to a destination via a deeplink URI.
@@ -260,8 +310,12 @@ class NavigationController internal constructor(
 
         when {
             shouldClose -> {
-                // TODO Close navigation when root popped
-                val message = "Cannot pop root destination."
+                if (parentController != null && !canNavigateUp && parentController.canNavigateUp) {
+                    parentController.navigateUp()
+                    return
+                }
+
+                val message = "Not a nested navigation. Cannot pop root destination."
                 Lumber.tag("NavigationController").error(message)
                 throw IllegalStateException(message)
             }
@@ -288,7 +342,7 @@ class NavigationController internal constructor(
                         route != null -> backStack[currentIndex] = route
                     }
                 }.getOrElse { exception ->
-                    val message = "Could not decode route for parent"
+                    val message = "Could not decode route for parent."
                     Lumber.tag("NavigationController").error(exception, message)
                     throw IllegalArgumentException(message, exception)
                 }
