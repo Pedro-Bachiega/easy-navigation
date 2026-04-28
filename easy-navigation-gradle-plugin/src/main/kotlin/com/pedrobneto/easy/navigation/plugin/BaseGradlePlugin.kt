@@ -89,10 +89,6 @@ abstract class BaseGradlePlugin : Plugin<Project> {
 
                     dependencies.add("ksp$capitalizedTargetName", dependency)
 
-                    if (name == "android") {
-                        dependencies.add("ksp", dependency)
-                    }
-
                     if (compilations.any { it.name == "test" }) {
                         dependencies.add("ksp${capitalizedTargetName}Test", dependency)
                     }
@@ -100,7 +96,7 @@ abstract class BaseGradlePlugin : Plugin<Project> {
 
                 kotlinExtension.sourceSets.named { name -> name == "commonMain" }.configureEach {
                     kotlin.srcDir(
-                        "${layout.buildDirectory.get()}/generated/ksp/metadata/commonMain/kotlin"
+                        layout.buildDirectory.dir("generated/ksp/metadata/commonMain/kotlin")
                     )
                 }
             }
