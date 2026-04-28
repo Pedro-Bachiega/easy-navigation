@@ -1,12 +1,14 @@
 plugins {
     `maven-publish`
     id("java-gradle-plugin")
-    alias(libs.plugins.jetbrains.kotlin.dsl)
-    alias(libs.plugins.jetbrains.kotlin.jvm)
+    `kotlin-dsl`
     alias(libs.plugins.gradle.publish)
 }
 
-apply(from = "$rootDir/versioning.gradle.kts")
+val repositoryRoot = rootDir.takeIf { it.resolve("versioning.gradle.kts").exists() }
+    ?: rootDir.parentFile
+
+apply(from = repositoryRoot.resolve("versioning.gradle.kts"))
 
 base {
     archivesName = "easy-navigation-library"

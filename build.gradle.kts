@@ -12,3 +12,12 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.multiplatform) apply false
     alias(libs.plugins.vanniktech.publish) apply false
 }
+
+subprojects {
+    configurations.configureEach {
+        resolutionStrategy.dependencySubstitution {
+            substitute(module("io.github.pedro-bachiega:easy-navigation-library-processor"))
+                .using(project(":processor"))
+        }
+    }
+}
