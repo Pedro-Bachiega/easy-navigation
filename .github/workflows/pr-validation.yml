@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Validate main PR source branch
         if: github.base_ref == 'main'
@@ -34,6 +36,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+
+      - name: Validate configuration cache
+        run: ./gradlew help --configuration-cache --no-daemon
 
       - name: Run checks
         run: ./gradlew check --no-daemon
