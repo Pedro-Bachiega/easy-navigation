@@ -2,6 +2,7 @@ package com.pedrobneto.easy.navigation.processor.library
 
 import com.google.devtools.ksp.processing.KSPLogger
 import com.pedrobneto.easy.navigation.processor.library.model.Direction
+
 private val kotlinIdentifier = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
 internal fun List<Direction>.validateNoCollisions(logger: KSPLogger): Boolean {
@@ -12,7 +13,10 @@ internal fun List<Direction>.validateNoCollisions(logger: KSPLogger): Boolean {
         .forEach { (route, directions) ->
             valid = false
             directions.forEach {
-                logger.error("Route $route is bound to multiple navigation destinations.", it.ksFile)
+                logger.error(
+                    "Route $route is bound to multiple navigation destinations.",
+                    it.ksFile
+                )
             }
         }
 
@@ -21,7 +25,10 @@ internal fun List<Direction>.validateNoCollisions(logger: KSPLogger): Boolean {
         .forEach { (name, directions) ->
             valid = false
             directions.forEach {
-                logger.error("Generated direction ${name.second} collides in package ${name.first}.", it.ksFile)
+                logger.error(
+                    "Generated direction ${name.second} collides in package ${name.first}.",
+                    it.ksFile
+                )
             }
         }
 
@@ -41,7 +48,11 @@ internal fun List<Direction>.validateNoCollisions(logger: KSPLogger): Boolean {
         .filterValues { it.map(Pair<String, String>::first).distinct().size > 1 }
         .forEach { (fileName, scopes) ->
             valid = false
-            logger.error("Generated registry name $fileName is shared by scopes ${scopes.map { it.first }.distinct()}.")
+            logger.error(
+                "Generated registry name $fileName is shared by scopes ${
+                    scopes.map { it.first }.distinct()
+                }."
+            )
         }
 
     return valid
