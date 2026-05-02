@@ -32,11 +32,16 @@ import com.squareup.kotlinpoet.ksp.writeTo
 
 private val composableAnnotation = ClassName("androidx.compose.runtime", "Composable")
 private const val SERIALIZABLE_ANNOTATION = "kotlinx.serialization.Serializable"
-private val navigationDirection = ClassName("com.pedrobneto.easy.navigation.core.model", "NavigationDirection")
-private val navigationRoute = ClassName("com.pedrobneto.easy.navigation.core.model", "NavigationRoute")
-private val navigationDeeplink = ClassName("com.pedrobneto.easy.navigation.core.model", "NavigationDeeplink")
-private val paneStrategyClass = ClassName("com.pedrobneto.easy.navigation.core.adaptive", "PaneStrategy")
-private val polymorphicModuleBuilder = ClassName("kotlinx.serialization.modules", "PolymorphicModuleBuilder")
+private val navigationDirection =
+    ClassName("com.pedrobneto.easy.navigation.core.model", "NavigationDirection")
+private val navigationRoute =
+    ClassName("com.pedrobneto.easy.navigation.core.model", "NavigationRoute")
+private val navigationDeeplink =
+    ClassName("com.pedrobneto.easy.navigation.core.model", "NavigationDeeplink")
+private val paneStrategyClass =
+    ClassName("com.pedrobneto.easy.navigation.core.adaptive", "PaneStrategy")
+private val polymorphicModuleBuilder =
+    ClassName("kotlinx.serialization.modules", "PolymorphicModuleBuilder")
 
 internal fun KSFunctionDeclaration.extractDirection(
     logger: KSPLogger,
@@ -44,10 +49,15 @@ internal fun KSFunctionDeclaration.extractDirection(
     isMultiplatformWithSingleTarget: Boolean
 ): Direction? {
     val ksFile = containingFile ?: return null
-    if (shouldSkipSourceSet(moduleName, ksFile.filePath, isMultiplatformWithSingleTarget)) return null
+    if (shouldSkipSourceSet(moduleName, ksFile.filePath, isMultiplatformWithSingleTarget)) {
+        return null
+    }
 
     if (!hasAnnotation(composableAnnotation)) {
-        logger.error("Navigation destination ${simpleName.asString()} must be annotated with @Composable.", this)
+        logger.error(
+            "Navigation destination ${simpleName.asString()} must be annotated with @Composable.",
+            this
+        )
         return null
     }
 
@@ -56,25 +66,39 @@ internal fun KSFunctionDeclaration.extractDirection(
         ?.typeArgument("value")
 
     if (routeType == null) {
-        logger.error("Navigation destination ${simpleName.asString()} must declare @Route(...).", this)
+        logger.error(
+            "Navigation destination ${simpleName.asString()} must declare @Route(...).",
+            this
+        )
         return null
     }
 
     if (!routeType.isNavigationRoute()) {
-        logger.error("@Route value ${routeType.qualifiedName().orEmpty()} must implement NavigationRoute.", this)
+        logger.error(
+            "@Route value ${
+                routeType.qualifiedName().orEmpty()
+            } must implement NavigationRoute.", this
+        )
         return null
     }
 
     if (!routeType.declaration.hasAnnotation(SERIALIZABLE_ANNOTATION)) {
-        logger.error("@Route value ${routeType.qualifiedName().orEmpty()} must be annotated with @Serializable.", this)
+        logger.error(
+            "@Route value ${
+                routeType.qualifiedName().orEmpty()
+            } must be annotated with @Serializable.", this
+        )
         return null
     }
 
     val routeQualifiedName = routeType.qualifiedName()
-        ?: return logger.errorAndNull("Could not resolve @Route value for ${simpleName.asString()}.", this)
+        ?: return logger.errorAndNull(
+            "Could not resolve @Route value for ${simpleName.asString()}.",
+            this
+        )
     val routeSimpleName = routeType.declaration.simpleName.asString()
 
-    val routeParameterName = findRouteParameterName(routeType, logger) ?: return null
+    val routeParameterName = findRouteParameterName(routeType)
     val parentRouteType = annotationsByType(ParentRoute::class)
         .firstOrNull()
         ?.typeArgument("value")
@@ -91,7 +115,8 @@ internal fun KSFunctionDeclaration.extractDirection(
         parentRouteQualifiedName = parentRouteType?.qualifiedName(),
         parentRoutePackageName = parentRouteType?.declaration?.packageName?.asString(),
         parentRouteClassName = parentRouteType?.declaration?.simpleName?.asString(),
-        parentDeeplink = annotationsByType(ParentDeeplink::class).firstOrNull()?.stringArgument("value"),
+        parentDeeplink = annotationsByType(ParentDeeplink::class).firstOrNull()
+            ?.stringArgument("value"),
         paneStrategy = getPaneStrategy(logger) ?: return null,
         functionPackageName = packageName.asString(),
         functionName = simpleName.asString(),
@@ -117,7 +142,12 @@ internal fun Direction.createDirectionFile(generator: CodeGenerator) {
         .addSuperclassConstructorParameter("routeClass = %T::class", routeClass)
         .addSuperclassConstructorParameter("deeplinks = %L", deeplinksCode())
         .apply {
-            if (isGlobal) addAnnotation(ClassName("com.pedrobneto.easy.navigation.core.annotation", "GlobalScope"))
+            if (isGlobal) addAnnotation(
+                ClassName(
+                    "com.pedrobneto.easy.navigation.core.annotation",
+                    "GlobalScope"
+                )
+            )
             parentDeeplink?.let {
                 addSuperclassConstructorParameter("parentDeeplink = %T(%S)", navigationDeeplink, it)
             }
@@ -143,42 +173,36 @@ internal fun Direction.createDirectionFile(generator: CodeGenerator) {
     )
 }
 
-private fun KSFunctionDeclaration.findRouteParameterName(routeType: KSType, logger: KSPLogger): String? {
-    if (parameters.isEmpty()) return ""
+private fun KSFunctionDeclaration.findRouteParameterName(routeType: KSType): String? {
+    if (parameters.isEmpty()) return null
 
     val matchingParameters = parameters.filter {
         it.type.resolve().qualifiedName() == routeType.qualifiedName()
     }
 
-    return when {
-        matchingParameters.size == 1 -> matchingParameters.first().name?.asString().orEmpty()
-        matchingParameters.isEmpty() -> {
-            logger.error(
-                "Navigation destination ${simpleName.asString()} has parameters, but none match " +
-                        "@Route(${routeType.qualifiedName().orEmpty()}::class).",
-                this
-            )
-            null
-        }
-
-        else -> {
-            logger.error("Navigation destination ${simpleName.asString()} has multiple route parameters.", this)
-            null
-        }
+    if (matchingParameters.size > 1) {
+        error("Navigation destination ${simpleName.asString()} has multiple route parameters.")
     }
+
+    return matchingParameters.firstOrNull()?.name?.asString()
 }
 
 private fun KSFunctionDeclaration.getPaneStrategy(logger: KSPLogger): PaneStrategy? {
     val extraPaneHosts = annotationsByType(ExtraPane::class).mapNotNull {
         val host = it.typeArgument("host")?.qualifiedName()?.let(::QualifiedName)
-        val ratio = it.floatArgument("ratio") ?: 0.5f
-        host?.let { qualifiedName -> PaneStrategy.Extra.PaneHost(route = qualifiedName, ratio = ratio) }
+        val ratio = it.floatArgument("ratio") ?: PaneStrategy.Extra.PaneHost.DEFAULT_RATIO
+        host?.let { qualifiedName ->
+            PaneStrategy.Extra.PaneHost(route = qualifiedName, ratio = ratio)
+        }
     }
-    val extraPane = PaneStrategy.Extra(hosts = extraPaneHosts).takeIf { extraPaneHosts.isNotEmpty() }
+    val extraPane =
+        PaneStrategy.Extra(hosts = extraPaneHosts).takeIf { extraPaneHosts.isNotEmpty() }
     val singlePane = PaneStrategy.Single.takeIf { hasAnnotation(SinglePane::class) }
-    val adaptivePane = annotationsByType(AdaptivePane::class)
-        .firstOrNull()
-        ?.let { PaneStrategy.Adaptive(ratio = it.floatArgument("ratio") ?: 1f) }
+    val adaptivePane = annotationsByType(AdaptivePane::class).firstOrNull()?.let {
+        PaneStrategy.Adaptive(
+            ratio = it.floatArgument("ratio") ?: PaneStrategy.Adaptive.DEFAULT_RATIO
+        )
+    }
 
     val foundList = listOfNotNull(extraPane, singlePane, adaptivePane)
     if (foundList.size > 1) {
@@ -193,7 +217,7 @@ private fun KSFunctionDeclaration.getPaneStrategy(logger: KSPLogger): PaneStrate
     return extraPane ?: singlePane ?: adaptivePane ?: PaneStrategy.Adaptive()
 }
 
-private fun KSFunctionDeclaration.shouldSkipSourceSet(
+private fun shouldSkipSourceSet(
     moduleName: String,
     filePath: String,
     isMultiplatformWithSingleTarget: Boolean
@@ -281,7 +305,12 @@ private fun Direction.drawFunction(function: ClassName): FunSpec {
             if (routeArgument == null) {
                 addStatement("%T()", function)
             } else {
-                addStatement("%T($routeArgument)", function, routeParameterName, ClassName.bestGuess(routeQualifiedName))
+                addStatement(
+                    "%T($routeArgument)",
+                    function,
+                    routeParameterName,
+                    ClassName.bestGuess(routeQualifiedName)
+                )
             }
         }
         .build()

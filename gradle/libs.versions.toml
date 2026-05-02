@@ -33,7 +33,7 @@ google-ksp = "2.3.6"
 kotlinpoet = "2.3.0"
 
 ## Gradle
-easy-navigation = "0.0.1-beta03"
+easy-navigation = "0.0.1-beta04"
 gradle-publish = "2.1.1"
 vanniktech-publish = "0.36.0"
 

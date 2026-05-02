@@ -15,11 +15,7 @@ internal fun Resolver.findNavigationSymbols(): List<KSAnnotated> = listOfNotNull
     Route::class.qualifiedName,
     ParentRoute::class.qualifiedName,
 ).flatMap(::getSymbolsWithAnnotation)
-    .distinctBy { it.stableName() }
-    .toList()
-
-internal fun Resolver.findSymbols(): List<KSFunctionDeclaration> = findNavigationSymbols()
-    .filterIsInstance<KSFunctionDeclaration>()
+    .distinctBy(KSAnnotated::stableName)
     .toList()
 
 private fun KSAnnotated.stableName(): String =
