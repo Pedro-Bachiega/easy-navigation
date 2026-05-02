@@ -1,7 +1,7 @@
 package com.pedrobneto.easy.navigation.sample.ui
 
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -10,8 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import com.pedrobneto.easy.navigation.sample.model.Orientation
@@ -22,7 +22,7 @@ import com.pedrobneto.easy.navigation.sample.model.WindowSize
 @Composable
 internal fun getCurrentScreenInfo(): State<ScreenInfo> {
     val windowInfo = LocalWindowInfo.current
-    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
 
     var width by remember { mutableStateOf(windowInfo.containerDpSize.width) }
     var height by remember { mutableStateOf(windowInfo.containerDpSize.height) }
