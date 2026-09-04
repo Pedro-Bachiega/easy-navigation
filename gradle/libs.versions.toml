@@ -8,7 +8,7 @@ detekt = "1.23.8"
 ktlint = "11.6.1"
 
 ## --- Build Config and SDK --- ##
-build-version-name = "0.0.1-beta05"
+build-version-name = "1.0.0"
 build-version-code = "1"
 build-sdk-min-toolkit = "28"
 build-sdk-min-sample = "28"
@@ -33,7 +33,7 @@ google-ksp = "2.3.11"
 kotlinpoet = "2.3.0"
 
 ## Gradle
-easy-navigation = "0.0.1-beta05"
+easy-navigation = "1.0.0"
 gradle-publish = "2.1.1"
 vanniktech-publish = "0.37.0"
 
