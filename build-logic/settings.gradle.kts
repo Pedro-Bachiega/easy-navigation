@@ -1,15 +1,15 @@
 @file:Suppress("UnstableApiUsage")
 
-rootProject.name = "easy-navigation-gradle-plugin"
+rootProject.name = "build-logic"
 
 pluginManagement {
-    apply(from = "$rootDir/../build-logic/repositories.gradle.kts")
+    apply(from = "$rootDir/repositories.gradle.kts")
     val repositoryList: RepositoryHandler.() -> Unit by extra
     repositories(repositoryList)
 }
 
 dependencyResolutionManagement {
-    apply(from = "$rootDir/../build-logic/repositories.gradle.kts")
+    apply(from = "$rootDir/repositories.gradle.kts")
     val repositoryList: RepositoryHandler.() -> Unit by extra
     repositories(repositoryList)
 

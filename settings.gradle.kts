@@ -3,7 +3,7 @@
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
-    apply(from = "$rootDir/kmp-build-plugin/repositories.gradle.kts")
+    apply(from = "$rootDir/build-logic/repositories.gradle.kts")
     val repositoryList: RepositoryHandler.() -> Unit by extra
     includeBuild("easy-navigation-gradle-plugin") {
         name = "easy-navigation-gradle-plugin-build"
@@ -12,7 +12,7 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    apply(from = "$rootDir/kmp-build-plugin/repositories.gradle.kts")
+    apply(from = "$rootDir/build-logic/repositories.gradle.kts")
     val repositoryList: RepositoryHandler.() -> Unit by extra
     repositories(repositoryList)
 
@@ -21,7 +21,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "easy-navigation"
 
-includeBuild("kmp-build-plugin")
+includeBuild("build-logic")
 
 include(
     ":core",

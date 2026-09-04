@@ -20,7 +20,7 @@ This repository is organized into these Gradle modules:
 - `sample:app`: shared Compose sample routes, destinations, and app shell.
 - `sample:target:desktop`: Compose Desktop launcher for the sample app.
 - `test`: shared test-only helpers, including coverage exclusions.
-- `kmp-build-plugin`: included build with local convention plugins used by this repository.
+- `build-logic`: included build with local convention plugins used by this repository.
 
 For consumers, the important published pieces are:
 

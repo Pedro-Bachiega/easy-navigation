@@ -14,7 +14,7 @@ Main modules:
 - `sample:app`: shared Compose sample routes and screens.
 - `sample:target:desktop`: Compose Desktop launcher for the sample app.
 - `test`: shared test-only helpers, including coverage exclusions.
-- `kmp-build-plugin`: included build that provides local convention plugins. In this checkout it is mostly consumed as an included build/built artifact; inspect it only when Gradle convention behavior is directly involved.
+- `build-logic`: included build that provides local convention plugins for this repository.
 
 Key packages:
 
@@ -35,7 +35,7 @@ Key packages:
 - Sample usage: `sample/app/src/commonMain/kotlin/com/pedrobneto/easy/navigation/sample/model/_routes.kt` and `sample/app/src/commonMain/kotlin/com/pedrobneto/easy/navigation/sample/ui/SampleApp.kt`.
 - Build setup: `settings.gradle.kts`, root `build.gradle.kts`, `gradle/libs.versions.toml`, and per-module `build.gradle.kts` files.
 
-Avoid loading generated output under `build/`, Gradle caches, or the `kmp-build-plugin/build/` tree unless diagnosing generated code or build artifacts.
+Avoid loading generated output under `build/`, Gradle caches, or the `build-logic/build/` tree unless diagnosing generated code or build artifacts.
 
 ## Common Commands
 
@@ -82,5 +82,5 @@ Add or update tests near the affected behavior. For generated code, prefer proce
 - Use `rg` and targeted file reads before opening whole directories.
 - Read `README.md` for user-facing concepts, but treat source and tests as authoritative when docs drift.
 - Do not inspect `build/` unless the task explicitly involves generated files, compiled artifacts, or Gradle output.
-- Before touching Gradle convention behavior, check whether the behavior lives in this repo, the included `kmp-build-plugin`, or the published easy-navigation plugin.
+- Before touching Gradle convention behavior, check whether the behavior lives in `build-logic` or the published easy-navigation plugin.
 - Keep edits scoped to the module that owns the behavior; sample changes should not be used to hide runtime or processor bugs.

@@ -5,7 +5,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 - Use the Gradle wrapper from the repo root: `./gradlew`.
 
 ### Full builds
-- Build all modules (annotation, core, processors, sample):
+- Build all modules (core, processor, Gradle plugin, sample):
   ```bash
   ./gradlew build
   ```
@@ -13,9 +13,9 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 ### Sample desktop application
 - Run the Compose Desktop sample:
   ```bash
-  ./gradlew :sample:run
+  ./gradlew :sample:target:desktop:run
   ```
-  This triggers KSP processors in `processor:library` and `processor:application` and uses the generated navigation registries.
+  This triggers the KSP processor and uses the generated navigation registries.
 
 ### Linting
 Modules that use the custom build plugin automatically apply Detekt and KtLint.
@@ -25,8 +25,8 @@ Modules that use the custom build plugin automatically apply Detekt and KtLint.
   ```
 
 ### Tests
-There are currently no tests in this repo, but standard Gradle test tasks are wired through the Kotlin Multiplatform/JVM tooling.
-- Run all verification tasks (including tests where present):
+Tests exist in `core/src/commonTest` and `processor/src/test`.
+- Run all verification tasks:
   ```bash
   ./gradlew check
   ```
@@ -43,16 +43,16 @@ There are currently no tests in this repo, but standard Gradle test tasks are wi
 
 ### Overview
 This project is a Kotlin Multiplatform navigation library built around JetBrains Compose Navigation (`navigation3`) with compile-time code generation via KSP. It is organized as:
-- `annotation`: API annotations for navigation entries.
-- `core`: runtime navigation primitives and Compose integration.
-- `processor:library`: KSP processor that generates per-module navigation directions and registries.
-- `processor:application`: KSP processor that aggregates all module registries into a global registry.
-- `sample`: Compose Desktop sample app demonstrating how to declare routes, annotate destinations, and use the generated navigation layer.
-- `kmp-build-plugin`: an internal Gradle plugin used to configure multiplatform targets, linting, and other build behavior.
+- `core`: runtime navigation primitives, annotations, adaptive pane support, and Compose integration.
+- `processor`: KSP processor that generates per-module navigation directions and registries.
+- `easy-navigation-gradle-plugin`: published Gradle plugin that wires the KSP processor into consumer modules.
+- `sample:app`: shared Compose sample routes, destinations, and app shell.
+- `sample:target:desktop`: Compose Desktop launcher for the sample app.
+- `build-logic`: internal included build used to configure multiplatform targets, linting, testing, and publishing behavior.
 
 ### Runtime navigation core (`core` module)
-Key types live in `core/src/commonMain/kotlin/com/pedrobneto/navigation/core`:
-- `NavigationRoute`: marker interface implemented by all route types (e.g. `FirstScreenRoute`, `SecondScreenRoute`).
+Key types live in `core/src/commonMain/kotlin/com/pedrobneto/easy/navigation/core`:
+- `NavigationRoute`: marker interface implemented by all route types (e.g. `HomeRoute`, `DetailsRoute`).
 - `NavigationDirection`: abstract description of a destination, binding a `NavigationRoute` class to a `Draw(route: NavigationRoute)` composable plus an optional list of deeplinks.
 - `DirectionRegistry`: simple container for a list of `NavigationDirection` instances belonging to a module.
 - `NavigationController`:
@@ -73,80 +73,50 @@ Key types live in `core/src/commonMain/kotlin/com/pedrobneto/navigation/core`:
 
 The runtime core is multiplatform and does not depend on Android-specific APIs; Android specifics (manifests, resources) are configured through the shared build plugin.
 
-### Annotation API (`annotation` module)
-`annotation/src/commonMain/kotlin/com/pedrobneto/navigation/annotation/NavigationEntry.kt` defines:
-- `@NavigationEntry(route: KClass<*>, deeplinks: Array<String> = [])`:
-  - Applied to composable functions that represent navigation destinations.
-  - `route` points to a `NavigationRoute`-implementing type.
-  - `deeplinks` lists URL-like strings (e.g. `"/first"`, `"/third?title=...&description=..."`) that map into route instances via query parameters.
+### Annotation API (`core` module)
+`core/src/commonMain/kotlin/com/pedrobneto/easy/navigation/core/annotation` defines the annotations used by consumers:
+- `@Route(route = SomeRoute::class)`: binds a composable destination to a `NavigationRoute`.
+- `@Deeplink`, `@ParentRoute`, `@ParentDeeplink`, and `@Scope`: declare deeplink and registry metadata used by generated directions.
 
-This module is pure API and shared between library consumers and KSP processors.
+These annotations are runtime API and shared between library consumers and the KSP processor.
 
-### Code generation pipeline (`processor:library` and `processor:application`)
-Navigation code is generated through two KSP processors, both run from the consuming module (in this repo, the `sample` module):
-1. **Per-module generation (`processor:library`)**
-   - `LibraryProcessor` scans for functions annotated with `@NavigationEntry`.
-   - For each function:
-     - Resolves the `route` class and any `deeplinks`.
-     - Detects which parameter (if any) is of the route type to forward into the composable.
-     - Generates:
-       - A `*Direction` object in the route’s package extending `NavigationDirection`, wiring `Draw` to call the annotated composable.
-       - A `<ModuleName>DirectionRegistry` in `com.pedrobneto.easy.navigation.registry` listing all generated `*Direction` objects for that module.
-   - Module naming is normalized (e.g., hyphens/underscores converted to camel case) to derive the registry class name.
-2. **Global aggregation (`processor:application`)**
-   - `ApplicationProcessor` expects a `easy-navigation.rootDir` KSP option (set in `sample/build.gradle.kts` to the repo root).
-   - It walks the file tree under that root looking for generated `*DirectionRegistry.kt` files in `build/generated/ksp/**/navigation/registry/`.
-   - It parses their package and class names and generates a single `GlobalDirectionRegistry` object in `com.pedrobneto.easy.navigation.registry` that:
-     - Extends `DirectionRegistry`.
-     - Flattens all module registries into one combined `directions` list.
+### Code generation pipeline (`processor`)
+Navigation code is generated by `LibraryProcessor`, run from consuming modules through the Easy Navigation Gradle plugin:
+- It scans for composable functions annotated with `@Route`.
+- For each destination, it resolves the route type, deeplinks, parent metadata, and pane strategy.
+- It generates a `*Direction` object and module `*DirectionRegistry` under `com.pedrobneto.easy.navigation.registry`.
+- Scoped registries are generated when destinations declare `@Scope`.
 
 The typical consumer pattern (shown in the `sample` app) is:
-- Include both processors via KSP (`kspJvm(project(":processor:library"))` and `kspJvm(project(":processor:application"))`).
-- Pass `easy-navigation.rootDir` so the application processor can discover generated registries.
+- Apply KSP and `io.github.pedro-bachiega.easy-navigation-library`.
+- The Gradle plugin adds the processor dependency and passes `easy-navigation.rootDir`.
 
 ### Sample application (`sample` module)
-The `sample` module is a Compose Desktop app that demonstrates the intended usage:
-- Entry point (`sample/src/jvmMain/kotlin/Main.kt`):
-  - Sets up logging (`Lumber.plant(DebugTree())`).
-  - Launches a `Window` titled "Easy Navigation" and renders the `App()` composable.
-- Routes (`sample/src/jvmMain/kotlin/com/pedrobneto/navigation/model`):
-  - `FirstScreenRoute`: `data object` implementing `NavigationRoute`.
-  - `SecondScreenRoute` and `ThirdScreenRoute`: `@Serializable` data classes implementing `NavigationRoute`, carrying the screen arguments that can be reconstructed from deeplink query parameters.
-- UI and navigation usage (`sample/src/jvmMain/kotlin/com/pedrobneto/navigation/ui`):
-  - `App`:
-    - Uses `MaterialTheme` + `Scaffold`.
-    - Obtains:
-      - A module-specific `SampleDirectionRegistry` (generated by the library processor).
-      - The global `GlobalDirectionRegistry` (generated by the application processor).
-    - Calls `Navigation` with:
-      - `initialRoute = FirstScreenRoute`.
-      - `directionRegistries = listOf(GlobalDirectionRegistry)`.
-  - Screen composables (`FirstScreenComposable`, `SecondScreenComposable`, `ThirdScreenComposable`):
-    - Annotated with `@NavigationEntry`, each bound to a specific route and optional deeplinks.
-    - Use `LocalNavigationController.current` to:
-      - Navigate via route instances (e.g., `navigateTo(SecondScreenRoute(...))`).
-      - Navigate via deeplink strings (e.g., `navigateTo("/third?title=...&description=...")`).
-      - Pop the back stack either by route (`popUpTo(FirstScreenRoute)`) or by deeplink (`navigateTo("/first", singleTop = true)`).
+The sample modules demonstrate the intended usage:
+- Entry point: `sample:target:desktop` uses `sample/target/desktop/src/jvmMain/kotlin/Main.kt` to launch `NavigationSample`.
+- Routes: `sample:app` declares `HomeRoute`, `DetailsRoute`, nested detail routes, `ExtraDetailsRoute`, and `SettingsRoute` in `sample/app/src/commonMain/kotlin/com/pedrobneto/easy/navigation/sample/model/_routes.kt`.
+- UI: `sample:app` binds composables with `@Route` and `@Deeplink`, then passes generated registries such as `AppDirectionRegistry` into the runtime `Navigation` API.
+- Navigation calls use `LocalNavigationController.current` to navigate by route instance or deeplink and to pop the back stack.
 
 The sample is the best reference for how library consumers should define routes, annotate destinations, and interact with the navigation controller.
 
-### Custom build plugin (`kmp-build-plugin`)
-The `kmp-build-plugin` composite project provides reusable Gradle plugins used throughout this repo:
+### Custom build plugin (`build-logic`)
+The `build-logic` included build provides reusable Gradle plugins used throughout this repo:
 - `plugin-multiplatform-library`:
   - Applies `com.android.library`, `org.jetbrains.kotlin.multiplatform`, and serialization plugins.
   - Configures KMP targets based on JSON configuration:
-    - Reads `project-config.json` at the repo root and/or `module-config.json` in each module (e.g., `annotation/module-config.json`, `core/module-config.json`).
+    - Reads `project-config.json` at the repo root and/or `module-config.json` in each module (e.g., `core/module-config.json`).
     - Fails the build with a clear error if no targets are configured.
   - For Android targets, standardizes `compileSdk`, `minSdk`, `buildToolsVersion`, and source sets.
   - Applies `plugin-lint` and `plugin-optimize` to enforce linting and dependency hygiene.
 - `plugin-desktop-application`:
   - Sets up a JVM target with Compose Desktop (`org.jetbrains.compose` and Kotlin Compose compiler plugins).
   - Applies `plugin-lint` and `plugin-optimize`.
-  - Used by the `sample` module, which then relies on Compose Desktop tasks such as `:sample:run`.
+  - Used by `sample:target:desktop`, which then relies on Compose Desktop tasks such as `:sample:target:desktop:run`.
 - `plugin-lint`:
   - Applies Detekt and KtLint plugins and wires them to shared configuration under the repo root (`tools/...` paths are referenced, even if not yet present).
   - Ensures Detekt runs on `src/main` sources, provides HTML/XML/TXT/SARIF/MD reports under each module’s `build/reports/detekt.*`.
-- `plugin-test` (not currently applied in this repo’s modules):
+- `plugin-test`:
   - Wires Jacoco and Kover coverage configuration and standard Android test options for applications/libraries.
 
 Understanding these custom plugins is important when adding new modules: they encapsulate most of the Gradle boilerplate, and new modules are expected to opt into them and declare their targets via JSON configuration.
@@ -155,4 +125,4 @@ Understanding these custom plugins is important when adding new modules: they en
 - `versioning.gradle.kts` derives the artifact `group` and `version`:
   - Prefers Gradle properties `GROUP` and `VERSION_NAME` when set.
   - Otherwise runs `git describe` once and caches the result in `build/version-name.txt`.
-- Processor modules (`processor:application` and `processor:library`) use the Vanniktech Maven Publish plugin and are configured to publish to `mavenLocal()`. This is primarily relevant if you start consuming them from other projects.
+- The `processor` module uses the Vanniktech Maven Publish plugin and is configured to publish to `mavenLocal()`. This is primarily relevant if you start consuming it from other projects.
