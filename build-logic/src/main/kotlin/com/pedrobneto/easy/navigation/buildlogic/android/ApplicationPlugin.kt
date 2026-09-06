@@ -53,7 +53,7 @@ internal class ApplicationPlugin : Plugin<Project> {
             versionCode = libs.version("build-version-code").toInt()
             versionName = libs.version("build-version-name")
 
-            androidResources.localeFilters += listOf("en-US", "pt-BR")
+            androidResources.localeFilters += listOf("en", "pt-rBR")
         }
 
         // TODO Config json for buildTypes and flavors
