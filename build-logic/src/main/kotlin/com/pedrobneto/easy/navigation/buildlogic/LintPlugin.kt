@@ -34,8 +34,14 @@ internal class LintPlugin : Plugin<Project> {
             autoCorrect = true
             allRules = false
             source.from("src/main")
-            config.setFrom("${target.rootDir}/tools/detekt-config.yml")
-            baseline = File("${target.rootDir}/tools/detekt-baseline.xml")
+            val detektConfig = target.rootDir.resolve("tools/detekt-config.yml")
+            if (detektConfig.exists()) {
+                config.setFrom(detektConfig)
+            }
+            val detektBaseline = target.rootDir.resolve("tools/detekt-baseline.xml")
+            if (detektBaseline.exists()) {
+                baseline = detektBaseline
+            }
         }
 
         tasks.withType(Detekt::class.java).configureEach {

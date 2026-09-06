@@ -9,6 +9,19 @@ plugins {
 kotlin {
     android.namespace = "com.pedrobneto.easy.navigation.sample"
 
+    iosArm64 {
+        binaries.framework {
+            baseName = "SampleApp"
+            isStatic = true
+        }
+    }
+    iosSimulatorArm64 {
+        binaries.framework {
+            baseName = "SampleApp"
+            isStatic = true
+        }
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.jetbrains.compose.foundation)
@@ -21,7 +34,6 @@ kotlin {
             implementation(libs.jetbrains.compose.material3.window)
             implementation(libs.jetbrains.compose.navigation3.ui)
             implementation(libs.jetbrains.compose.ui)
-            implementation(libs.jetbrains.compose.ui.tooling)
             implementation(libs.jetbrains.compose.ui.tooling.preview)
             implementation(libs.jetbrains.compose.ui.util)
 
