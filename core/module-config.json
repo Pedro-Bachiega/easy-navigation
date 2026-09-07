@@ -2,6 +2,7 @@
   "targets": [
     "ANDROID",
     "IOS_ARM64",
+    "IOS_SIMULATOR_ARM64",
     "JVM"
   ]
 }

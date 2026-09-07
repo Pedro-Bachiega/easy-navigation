@@ -20,7 +20,6 @@ internal class ApplicationPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit = with(target) {
         applyPlugins(
             "android-application",
-            "jetbrains-kotlin-android",
             "jetbrains-compose-compiler",
             "jetbrains-compose-kotlin",
             "jetbrains-serialization",
@@ -48,13 +47,13 @@ internal class ApplicationPlugin : Plugin<Project> {
             minSdk = libs.version("build-sdk-min-sample").toInt()
             targetSdk = libs.version("build-sdk-target").toInt()
 
-            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
             versionCode = libs.version("build-version-code").toInt()
             versionName = libs.version("build-version-name")
 
-            androidResources.localeFilters += listOf("en-US", "pt-BR")
+            androidResources.localeFilters += listOf("en", "pt-rBR")
         }
 
         // TODO Config json for buildTypes and flavors

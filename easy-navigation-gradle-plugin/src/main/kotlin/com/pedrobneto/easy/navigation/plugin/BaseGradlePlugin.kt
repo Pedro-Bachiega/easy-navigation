@@ -99,6 +99,13 @@ abstract class BaseGradlePlugin : Plugin<Project> {
                         layout.buildDirectory.dir("generated/ksp/metadata/commonMain/kotlin")
                     )
                 }
+
+                tasks.matching {
+                    it.name.contains("AndroidHostTest") &&
+                        (it.name.startsWith("lint") || it.name == "generateAndroidHostTestLintModel")
+                }.configureEach {
+                    dependsOn("kspAndroidHostTest")
+                }
             }
         }
     }
