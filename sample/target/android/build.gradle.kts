@@ -7,5 +7,6 @@ android {
 }
 
 dependencies {
+    implementation(libs.jetbrains.compose.ui)
     implementation(projects.sample.app)
 }
