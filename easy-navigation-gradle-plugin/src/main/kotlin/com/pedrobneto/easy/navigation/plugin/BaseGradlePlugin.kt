@@ -100,7 +100,10 @@ abstract class BaseGradlePlugin : Plugin<Project> {
                     )
                 }
 
-                tasks.matching { it.name == "generateAndroidHostTestLintModel" }.configureEach {
+                tasks.matching {
+                    it.name.contains("AndroidHostTest") &&
+                        (it.name.startsWith("lint") || it.name == "generateAndroidHostTestLintModel")
+                }.configureEach {
                     dependsOn("kspAndroidHostTest")
                 }
             }
