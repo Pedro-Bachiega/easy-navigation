@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation3.runtime.NavBackStack
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.pedrobneto.easy.navigation.core.adaptive.PaneStrategy
+import com.pedrobneto.easy.navigation.core.modal.ModalConfig
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import kotlin.reflect.KClass
 
@@ -31,12 +32,14 @@ abstract class NavigationDirection(
     val routeClass: KClass<out NavigationRoute>,
     val parentDeeplink: NavigationDeeplink? = null,
     val parentRouteClass: KClass<out NavigationRoute>? = null,
-    val paneStrategy: PaneStrategy = PaneStrategy.Adaptive()
+    val paneStrategy: PaneStrategy = PaneStrategy.Adaptive(),
+    val modalConfig: ModalConfig? = null,
 ) {
-    internal val metadata: Map<String, Any> = mapOf(
-        METADATA_ROUTE_KEY to routeClass.qualifiedName.orEmpty(),
-        METADATA_STRATEGY_KEY to paneStrategy,
-    )
+    internal val metadata: Map<String, Any> = buildMap {
+        put(METADATA_ROUTE_KEY, routeClass.qualifiedName.orEmpty())
+        put(METADATA_STRATEGY_KEY, paneStrategy)
+        modalConfig?.let { put(METADATA_MODAL_KEY, it) }
+    }
 
     /**
      * Registers the direction into the `serializersModule` of the [NavBackStack]'s [SavedStateConfiguration]
@@ -54,5 +57,6 @@ abstract class NavigationDirection(
     internal companion object {
         const val METADATA_ROUTE_KEY = "route"
         const val METADATA_STRATEGY_KEY = "strategy"
+        const val METADATA_MODAL_KEY = "modal"
     }
 }

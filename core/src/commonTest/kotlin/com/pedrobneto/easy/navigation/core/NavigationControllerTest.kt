@@ -8,6 +8,7 @@ import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.core.modal.ModalConfig
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
@@ -68,6 +69,17 @@ class NavigationControllerTest {
         object : NavigationDirection(
             deeplinks = emptyList(),
             routeClass = TestSettingsRoute::class
+        ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
+            @Composable
+            override fun Draw(route: NavigationRoute) {
+            }
+        },
+        object : NavigationDirection(
+            deeplinks = emptyList(),
+            routeClass = TestModalRoute::class,
+            modalConfig = ModalConfig(dismissible = false)
         ) {
             override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
 
@@ -259,6 +271,24 @@ class NavigationControllerTest {
 
         assertEquals(2, controller.backStack.size)
         assertEquals(TestDetailsRoute(1), controller.backStack.last())
+    }
+
+    @Test
+    fun `system back does not dismiss a non dismissible modal`() {
+        controller.navigateTo(TestModalRoute)
+
+        controller.handleSystemBack()
+
+        assertEquals(TestModalRoute, controller.currentRoute)
+    }
+
+    @Test
+    fun `explicit navigate up dismisses a non dismissible modal`() {
+        controller.navigateTo(TestModalRoute)
+
+        controller.navigateUp()
+
+        assertEquals(TestHomeRoute, controller.currentRoute)
     }
 
     @Test
@@ -517,6 +547,8 @@ class NavigationControllerTest {
 
     @Serializable
     data object TestSettingsRoute : NavigationRoute
+    @Serializable
+    data object TestModalRoute : NavigationRoute
 
     @Serializable
     data object TestExtraDetailsRoute : NavigationRoute

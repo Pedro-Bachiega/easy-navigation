@@ -147,6 +147,46 @@ Navigation(
 
 `rememberAdaptiveSceneStrategies` also accepts options such as `isUsingAdaptiveLayout` and `orientation`, which the sample app derives from the current window state.
 
+### Modal destinations
+
+Mark a destination with `@Modal` to render it above the complete previous scene. The route remains
+in the same back stack, so an explicit `navigateUp()` closes it. By default, system back and taps
+outside the modal content dismiss it; use `dismissible = false` for a blocking modal.
+
+```kotlin
+import com.pedrobneto.easy.navigation.core.LocalNavigationController
+import com.pedrobneto.easy.navigation.core.annotation.Route
+import com.pedrobneto.easy.navigation.core.modal.Modal
+
+@Modal
+@Route(CheckoutConfirmationRoute::class)
+@Composable
+fun CheckoutConfirmationScreen() {
+    val navigation = LocalNavigationController.current
+
+    ConfirmationCard(
+        onConfirm = { navigation.navigateUp() },
+        onCancel = { navigation.navigateUp() },
+    )
+}
+```
+
+The modal composable owns its surface, sizing, alignment, and optional visual scrim. The library
+provides the overlay layer and keeps the scene below intact. Modal destinations cannot be combined
+with `@AdaptivePane`, `@SinglePane`, or `@ExtraPane`.
+
+The modal can optionally provide its own no-argument transition policy. When omitted, it inherits
+the `modal` policy configured in `NavigationTransitions`:
+
+```kotlin
+@Modal(transitions = CheckoutModalTransitions::class)
+@Route(CheckoutConfirmationRoute::class)
+@Composable
+fun CheckoutConfirmationScreen() = CheckoutConfirmationContent()
+```
+
+The transition type can be a regular class or an `object`. It must implement `ModalTransitions`.
+
 ### Navigation controller
 
 `NavigationController` owns the current back stack and exposes route and deeplink navigation.
@@ -240,6 +280,28 @@ Navigation(
 ```
 
 Nested graphs use the same pattern: create a child controller with its own initial route and pass it to a nested `Navigation` composable.
+
+### Navigation transitions
+
+Scene and modal animations are configured together through `NavigationTransitions`. Regular scene
+transitions control screen and pane changes; modal transitions control the overlay content and its
+scrim.
+
+```kotlin
+Navigation(
+    modifier = Modifier.fillMaxSize(),
+    initialRoute = HomeRoute,
+    directionRegistries = registries,
+    transitions = NavigationTransitions(
+        regular = DefaultRegularSceneTransitions(),
+        modal = DefaultModalTransitions(),
+    )
+)
+```
+
+The two animation channels are intentionally grouped in one configuration because Navigation 3
+renders regular scenes and `OverlayScene` modals through different internal mechanisms. Consumers
+only need to configure one navigation policy.
 
 ## Code generation
 
