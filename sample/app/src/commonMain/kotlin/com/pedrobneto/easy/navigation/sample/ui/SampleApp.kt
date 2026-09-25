@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.pedrobneto.easy.navigation.core.Navigation
 import com.pedrobneto.easy.navigation.core.NavigationController
 import com.pedrobneto.easy.navigation.core.adaptive.AdaptiveSceneStrategy
-import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategies
+import com.pedrobneto.easy.navigation.core.adaptive.rememberDefaultSceneStrategies
 import com.pedrobneto.easy.navigation.core.extension.rememberNavBackStack
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
@@ -47,6 +47,8 @@ import com.pedrobneto.easy.navigation.sample.model.ExtraDetailsRoute
 import com.pedrobneto.easy.navigation.sample.model.HomeRoute
 import com.pedrobneto.easy.navigation.sample.model.Orientation
 import com.pedrobneto.easy.navigation.sample.model.SettingsRoute
+import com.pedrobneto.easy.navigation.sample.model.ModalDemoRoute
+import com.pedrobneto.easy.navigation.sample.model.SpringModalDemoRoute
 import com.pedrobneto.easy.navigation.sample.model.WindowSize
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -121,7 +123,7 @@ fun NavigationSample() {
                 initialRoute = initialRoute,
                 directionRegistries = registries,
                 controller = navigationController,
-                sceneStrategies = rememberAdaptiveSceneStrategies(
+                sceneStrategies = rememberDefaultSceneStrategies(
                     isUsingAdaptiveLayout = isUsingAdaptiveLayout,
                     orientation = orientation
                 )
@@ -204,6 +206,8 @@ private val NavigationRoute.label: String
         is DetailsFaresRoute -> "Fares #$id"
         is ExtraDetailsRoute -> "Extra details"
         is SettingsRoute -> "Settings"
+        is ModalDemoRoute -> "Modal example"
+        is SpringModalDemoRoute -> "Spring modal example"
         else -> this::class.simpleName ?: "Route"
     }
 

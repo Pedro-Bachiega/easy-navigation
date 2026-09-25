@@ -101,6 +101,11 @@ class NavigationController internal constructor(
         get() = directions.find { it.routeClass == currentRoute::class }
             ?: error("No direction found for route $currentRoute")
 
+    internal fun handleSystemBack() {
+        if (currentDirection.modalConfig?.dismissible == false) return
+        safeNavigateUp()
+    }
+
     /**
      * Provides a [NavEntry] for a given [NavigationRoute], allowing the navigation framework
      * to render the correct composable for each route.

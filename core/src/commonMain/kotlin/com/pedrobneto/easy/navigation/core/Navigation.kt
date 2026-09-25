@@ -1,7 +1,5 @@
 package com.pedrobneto.easy.navigation.core
 
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.SizeTransform
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -11,17 +9,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
-import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneDecoratorStrategy
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.ui.NavDisplay
-import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
-import androidx.navigationevent.NavigationEvent
-import com.pedrobneto.easy.navigation.core.adaptive.popTo
-import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategies
-import com.pedrobneto.easy.navigation.core.adaptive.transitionTo
+import com.pedrobneto.easy.navigation.core.adaptive.rememberDefaultSceneStrategies
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.core.transition.NavigationTransitions
 import com.pedrobneto.easy.navigation.test.KoverExcludes
 
 /**
@@ -60,19 +54,13 @@ fun Navigation(
     contentAlignment: Alignment = Alignment.TopStart,
     entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator()),
-    sceneStrategies: List<SceneStrategy<NavigationRoute>> = rememberAdaptiveSceneStrategies(),
+    transitions: NavigationTransitions = NavigationTransitions(),
+    sceneStrategies: List<SceneStrategy<NavigationRoute>> = rememberDefaultSceneStrategies(
+        modalTransitions = transitions.modal
+    ),
     sceneDecoratorStrategies: List<SceneDecoratorStrategy<NavigationRoute>> = emptyList(),
     sharedTransitionScope: SharedTransitionScope? = null,
     sizeTransform: SizeTransform? = null,
-    transitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
-        initialState transitionTo targetState
-    },
-    popTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.() -> ContentTransform = {
-        initialState popTo targetState
-    },
-    predictivePopTransitionSpec: AnimatedContentTransitionScope<Scene<NavigationRoute>>.(
-        @NavigationEvent.SwipeEdge Int
-    ) -> ContentTransform = defaultPredictivePopTransitionSpec(),
 ) = CompositionLocalProvider(
     LocalNavigationController provides controller,
     LocalParentNavigationController provides controller
@@ -87,8 +75,9 @@ fun Navigation(
         sceneDecoratorStrategies = sceneDecoratorStrategies,
         sharedTransitionScope = sharedTransitionScope,
         sizeTransform = sizeTransform,
-        transitionSpec = transitionSpec,
-        popTransitionSpec = popTransitionSpec,
-        predictivePopTransitionSpec = predictivePopTransitionSpec,
+        transitionSpec = transitions.regular.transitionSpec,
+        popTransitionSpec = transitions.regular.popTransitionSpec,
+        predictivePopTransitionSpec = transitions.regular.predictivePopTransitionSpec,
+        onBack = controller::handleSystemBack,
     )
 }
