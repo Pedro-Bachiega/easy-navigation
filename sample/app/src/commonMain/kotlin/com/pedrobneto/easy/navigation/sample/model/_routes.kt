@@ -29,3 +29,6 @@ data object ModalDemoRoute : NavigationRoute
 
 @Serializable
 data object SpringModalDemoRoute : NavigationRoute
+
+@Serializable
+data class ResultDemoRoute(val query: String) : NavigationRoute

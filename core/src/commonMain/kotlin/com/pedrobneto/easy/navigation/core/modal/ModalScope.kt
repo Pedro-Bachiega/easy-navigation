@@ -54,6 +54,14 @@ class ModalScope internal constructor(
     fun safeNavigateUp(): Boolean = controller.safeNavigateUp()
 
     @UnsafeNavigationApi
+    inline fun <reified T> navigateUpWithResult(value: T) =
+        controller.navigateUpWithResult(value)
+
+    @SafeNavigationApi
+    inline fun <reified T> safeNavigateUpWithResult(value: T): Boolean =
+        controller.safeNavigateUpWithResult(value)
+
+    @UnsafeNavigationApi
     fun popUpTo(route: NavigationRoute, inclusive: Boolean = false) =
         controller.popUpTo(route, inclusive)
 
