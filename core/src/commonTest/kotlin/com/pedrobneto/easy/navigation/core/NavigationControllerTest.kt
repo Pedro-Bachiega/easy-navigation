@@ -7,9 +7,12 @@ import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
+import com.pedrobneto.easy.navigation.core.model.NavigationResult
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.core.modal.ModalScope
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import kotlin.test.BeforeTest
@@ -161,6 +164,279 @@ class NavigationControllerTest {
         assertFalse(controller.safeNavigateUp())
         assertEquals(1, controller.backStack.size)
         assertEquals(TestHomeRoute, controller.backStack.last())
+    }
+
+    @Test
+    fun `result launcher returns confirmed result and navigates up`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val results = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(launcherId, TestNavigationResult.serializer()) { results += it }
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+
+        assertTrue(launcher.navigateForResult(TestDetailsRoute(42)))
+        assertFalse(launcher.navigateForResult(TestSettingsRoute))
+        assertEquals(TestDetailsRoute(42), controller.currentRoute)
+
+        val result = TestNavigationResult("saved")
+        controller.navigateUpWithResult(result)
+
+        assertEquals(TestHomeRoute, controller.currentRoute)
+        assertEquals(listOf<NavigationResult<TestNavigationResult>>(NavigationResult.Confirmed(result)), results)
+    }
+
+    @Test
+    fun `result launcher resolves deeplink payload and returns confirmed result`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val results = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(launcherId, TestNavigationResult.serializer()) { results += it }
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+
+        assertTrue(
+            launcher.navigateForResult(
+                deeplink = "/details/42?campaign=spring",
+                payload = TestPayload(source = "launcher"),
+            ),
+        )
+        assertEquals(
+            TestDetailsRoute(id = 42, source = "launcher", campaign = "spring"),
+            controller.currentRoute,
+        )
+        controller.navigateUpWithResult(TestNavigationResult("done"))
+
+        assertEquals(
+            listOf<NavigationResult<TestNavigationResult>>(
+                NavigationResult.Confirmed(TestNavigationResult("done")),
+            ),
+            results,
+        )
+    }
+
+    @Test
+    fun `result launcher resolves a deeplink without payload`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val results = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(launcherId, TestNavigationResult.serializer()) { results += it }
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+
+        assertTrue(launcher.navigateForResult("/details/7"))
+        assertEquals(TestDetailsRoute(7), controller.currentRoute)
+        controller.navigateUpWithResult(TestNavigationResult("done"))
+
+        assertEquals(
+            listOf<NavigationResult<TestNavigationResult>>(
+                NavigationResult.Confirmed(TestNavigationResult("done")),
+            ),
+            results,
+        )
+    }
+
+    @Test
+    fun `safe result launcher returns false for invalid deeplink`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+
+        assertFalse(launcher.safeNavigateForResult("/missing"))
+        assertEquals(listOf(TestHomeRoute), controller.backStack.toList())
+    }
+
+    @Test
+    fun `removing result destination delivers cancelled`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val results = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(launcherId, TestNavigationResult.serializer()) { results += it }
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+        launcher.navigateForResult(TestDetailsRoute(42))
+
+        controller.navigateUp()
+
+        assertEquals(TestHomeRoute, controller.currentRoute)
+        assertEquals(listOf<NavigationResult<TestNavigationResult>>(NavigationResult.Cancelled), results)
+    }
+
+    @Test
+    fun `popUpTo cancels a pending result destination`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val results = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(launcherId, TestNavigationResult.serializer()) { results += it }
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+        launcher.navigateForResult(TestDetailsRoute(42))
+
+        controller.popUpTo(TestHomeRoute)
+
+        assertEquals(TestHomeRoute, controller.currentRoute)
+        assertEquals(listOf<NavigationResult<TestNavigationResult>>(NavigationResult.Cancelled), results)
+    }
+
+    @Test
+    fun `NewStack cancels a pending result destination it removes`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val results = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(launcherId, TestNavigationResult.serializer()) { results += it }
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+        launcher.navigateForResult(TestDetailsRoute(42))
+
+        controller.navigateTo(TestSettingsRoute, LaunchStrategy.NewStack)
+
+        assertEquals(TestSettingsRoute, controller.currentRoute)
+        assertEquals(listOf<NavigationResult<TestNavigationResult>>(NavigationResult.Cancelled), results)
+    }
+
+    @Test
+    fun `chained launchers each receive only their own destination result`() {
+        val firstLauncherId = controller.allocateResultLauncherId()
+        val secondLauncherId = controller.allocateResultLauncherId()
+        val firstResults = mutableListOf<NavigationResult<TestNavigationResult>>()
+        val secondResults = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(firstLauncherId, TestNavigationResult.serializer()) {
+            firstResults += it
+        }
+        controller.registerResultCallback(secondLauncherId, TestNavigationResult.serializer()) {
+            secondResults += it
+        }
+        val firstLauncher = NavigationResultLauncher<TestNavigationResult>(controller, firstLauncherId)
+        val secondLauncher = NavigationResultLauncher<TestNavigationResult>(controller, secondLauncherId)
+
+        firstLauncher.navigateForResult(TestDetailsRoute(42))
+        secondLauncher.navigateForResult(TestSettingsRoute)
+        controller.navigateUpWithResult(TestNavigationResult("settings"))
+
+        assertEquals(
+            listOf<NavigationResult<TestNavigationResult>>(
+                NavigationResult.Confirmed(TestNavigationResult("settings")),
+            ),
+            secondResults,
+        )
+        assertTrue(firstResults.isEmpty())
+        assertEquals(TestDetailsRoute(42), controller.currentRoute)
+
+        controller.navigateUpWithResult(TestNavigationResult("details"))
+
+        assertEquals(
+            listOf<NavigationResult<TestNavigationResult>>(
+                NavigationResult.Confirmed(TestNavigationResult("details")),
+            ),
+            firstResults,
+        )
+    }
+
+    @Test
+    fun `safe navigate up with result confirms even when root cannot navigate up`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val results = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(launcherId, TestNavigationResult.serializer()) { results += it }
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+        launcher.navigateForResult(TestDetailsRoute(42), LaunchStrategy.NewStack)
+
+        assertFalse(controller.safeNavigateUpWithResult(TestNavigationResult("still delivered")))
+
+        assertEquals(TestDetailsRoute(42), controller.currentRoute)
+        assertEquals(
+            listOf<NavigationResult<TestNavigationResult>>(
+                NavigationResult.Confirmed(TestNavigationResult("still delivered")),
+            ),
+            results,
+        )
+    }
+
+    @Test
+    fun `unsafe navigate up with result confirms before throwing at root`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val results = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(launcherId, TestNavigationResult.serializer()) { results += it }
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+        launcher.navigateForResult(TestDetailsRoute(42), LaunchStrategy.NewStack)
+
+        assertFailsWith<IllegalStateException> {
+            controller.navigateUpWithResult(TestNavigationResult("still delivered"))
+        }
+
+        assertEquals(TestDetailsRoute(42), controller.currentRoute)
+        assertEquals(
+            listOf<NavigationResult<TestNavigationResult>>(
+                NavigationResult.Confirmed(TestNavigationResult("still delivered")),
+            ),
+            results,
+        )
+    }
+
+    @Test
+    fun `result state serializes pending request for process restoration`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+        launcher.navigateForResult(TestDetailsRoute(42))
+
+        val stateJson = Json.encodeToString(NavigationResultState.serializer(), controller.navigationResultState.value)
+        val restoredState = Json.decodeFromString<NavigationResultState>(stateJson)
+        val restoredController = NavigationController(
+            backStack = NavBackStack(mutableStateListOf(*controller.backStack.toTypedArray())),
+            directionRegistryList = listOf(testRegistry),
+            json = Json { ignoreUnknownKeys = true },
+            navigationResultState = androidx.compose.runtime.mutableStateOf(restoredState),
+        )
+        val restoredResults = mutableListOf<NavigationResult<TestNavigationResult>>()
+        restoredController.registerResultCallback(launcherId, TestNavigationResult.serializer()) {
+            restoredResults += it
+        }
+
+        restoredController.navigateUpWithResult(TestNavigationResult("restored"))
+
+        assertEquals(
+            listOf<NavigationResult<TestNavigationResult>>(
+                NavigationResult.Confirmed(TestNavigationResult("restored")),
+            ),
+            restoredResults,
+        )
+        assertEquals(TestHomeRoute, restoredController.currentRoute)
+    }
+
+    @Test
+    fun `completed result is delivered after restored caller re-registers`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+        launcher.navigateForResult(TestDetailsRoute(42))
+        controller.navigateUpWithResult(TestNavigationResult("queued"))
+
+        val stateJson = Json.encodeToString(NavigationResultState.serializer(), controller.navigationResultState.value)
+        val restoredState = Json.decodeFromString<NavigationResultState>(stateJson)
+        val restoredController = NavigationController(
+            backStack = NavBackStack(mutableStateListOf(*controller.backStack.toTypedArray())),
+            directionRegistryList = listOf(testRegistry),
+            json = Json { ignoreUnknownKeys = true },
+            navigationResultState = androidx.compose.runtime.mutableStateOf(restoredState),
+        )
+        val restoredResults = mutableListOf<NavigationResult<TestNavigationResult>>()
+
+        restoredController.registerResultCallback(launcherId, TestNavigationResult.serializer()) {
+            restoredResults += it
+        }
+
+        assertEquals(
+            listOf<NavigationResult<TestNavigationResult>>(
+                NavigationResult.Confirmed(TestNavigationResult("queued")),
+            ),
+            restoredResults,
+        )
+        assertFalse(restoredController.isResultLauncherPending(launcherId))
+    }
+
+    @Test
+    fun `modal scope delegates result return`() {
+        val launcherId = controller.allocateResultLauncherId()
+        val results = mutableListOf<NavigationResult<TestNavigationResult>>()
+        controller.registerResultCallback(launcherId, TestNavigationResult.serializer()) { results += it }
+        val launcher = NavigationResultLauncher<TestNavigationResult>(controller, launcherId)
+        launcher.navigateForResult(TestModalRoute)
+        val modalScope = ModalScope(controller)
+
+        modalScope.navigateUpWithResult(TestNavigationResult("modal"))
+
+        assertEquals(TestHomeRoute, controller.currentRoute)
+        assertEquals(
+            listOf<NavigationResult<TestNavigationResult>>(
+                NavigationResult.Confirmed(TestNavigationResult("modal")),
+            ),
+            results,
+        )
     }
 
     @Test
@@ -659,6 +935,9 @@ class NavigationControllerTest {
 
     @Serializable
     data class TestPayload(val source: String)
+
+    @Serializable
+    data class TestNavigationResult(val value: String)
 
     @Serializable
     data object TestSettingsRoute : NavigationRoute

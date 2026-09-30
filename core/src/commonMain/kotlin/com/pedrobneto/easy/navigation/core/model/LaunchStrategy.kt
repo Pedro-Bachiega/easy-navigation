@@ -1,7 +1,6 @@
 package com.pedrobneto.easy.navigation.core.model
 
 import com.pedrobneto.easy.navigation.core.NavigationController
-import com.pedrobneto.easy.navigation.core.extension.removeRange
 
 /**
  * Defines how a navigation destination should be launched, affecting the back stack.
@@ -12,15 +11,23 @@ sealed class LaunchStrategy {
      * Handles the navigation to a given [route] based on the specific strategy,
      * modifying the [controller]'s back stack.
      */
-    internal abstract fun handleNavigation(route: NavigationRoute, controller: NavigationController)
+    internal abstract fun handleNavigation(
+        route: NavigationRoute,
+        controller: NavigationController,
+        resultLauncherId: Long? = null,
+    )
 
     /**
      * The default navigation behavior. A new instance of the destination is always pushed onto the
      * back stack.
      */
     data object Default : LaunchStrategy() {
-        override fun handleNavigation(route: NavigationRoute, controller: NavigationController) {
-            controller.backStack.add(route)
+        override fun handleNavigation(
+            route: NavigationRoute,
+            controller: NavigationController,
+            resultLauncherId: Long?,
+        ) {
+            controller.addRoute(route, resultLauncherId)
         }
     }
 
@@ -39,28 +46,31 @@ sealed class LaunchStrategy {
      * and the new destination is pushed to the top of the stack.
      */
     class SingleTop(val clearTop: Boolean = true) : LaunchStrategy() {
-        override fun handleNavigation(route: NavigationRoute, controller: NavigationController) {
+        override fun handleNavigation(
+            route: NavigationRoute,
+            controller: NavigationController,
+            resultLauncherId: Long?,
+        ) {
             val backStack = controller.backStack
-            val existingInstances = backStack.filter { it::class == route::class }
+            val existingIndices = backStack.indices.filter { backStack[it]::class == route::class }
             val isAlreadyOnTop = backStack.lastOrNull()?.let { it::class == route::class } == true
 
             when {
-                existingInstances.size == 1 && isAlreadyOnTop -> {
-                    backStack[backStack.lastIndex] = route
+                existingIndices.size == 1 && isAlreadyOnTop -> {
+                    controller.replaceRoute(backStack.lastIndex, route, resultLauncherId)
                     return
                 }
 
-                existingInstances.isNotEmpty() && clearTop -> {
-                    val indexOfFirst = backStack.indexOf(existingInstances.first())
-                    backStack.removeRange(indexOfFirst, backStack.size)
+                existingIndices.isNotEmpty() && clearTop -> {
+                    controller.removeRoutes(existingIndices.first(), backStack.size)
                 }
 
-                existingInstances.isNotEmpty() -> {
-                    backStack.removeAll(existingInstances)
+                existingIndices.isNotEmpty() -> {
+                    controller.removeRouteIndices(existingIndices)
                 }
             }
 
-            backStack.add(route)
+            controller.addRoute(route, resultLauncherId)
         }
     }
 
@@ -69,9 +79,17 @@ sealed class LaunchStrategy {
      * This is useful for flows that should not allow returning to the previous flow, such as after a login or logout.
      */
     data object NewStack : LaunchStrategy() {
-        override fun handleNavigation(route: NavigationRoute, controller: NavigationController) {
-            controller.backStack.add(route)
-            controller.backStack.removeRange(0, controller.backStack.lastIndex)
+        override fun handleNavigation(
+            route: NavigationRoute,
+            controller: NavigationController,
+            resultLauncherId: Long?,
+        ) {
+            if (resultLauncherId != null) {
+                br.com.arch.toolkit.lumber.Lumber.tag("NavigationController").warn(
+                    "NewStack clears the launcher caller from the back stack; its route cannot be restored when returning a result."
+                )
+            }
+            controller.replaceStackWith(route, resultLauncherId)
         }
     }
 }
