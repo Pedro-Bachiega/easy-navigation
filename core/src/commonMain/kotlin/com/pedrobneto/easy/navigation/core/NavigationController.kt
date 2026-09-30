@@ -4,7 +4,9 @@ package com.pedrobneto.easy.navigation.core
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
@@ -19,10 +21,15 @@ import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.core.model.NavigationResult
+import com.pedrobneto.easy.navigation.core.modal.ModalScope
 import com.pedrobneto.easy.navigation.test.KoverExcludes
 import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.serializer
+import kotlinx.serialization.json.Json
 import kotlin.reflect.KClass
 
 /**
@@ -63,12 +70,17 @@ fun rememberNavigationController(
     }
 ): NavigationController {
     val parentController = LocalParentNavigationController.current
-    return remember(initialRoute, directionRegistries) {
+    val resultState = rememberSerializable(
+        stateSerializer = NavigationResultState.serializer(),
+        init = { mutableStateOf(NavigationResultState.initial(backStack.size)) },
+    )
+    return remember(initialRoute, directionRegistries, resultState) {
         NavigationController(
             backStack = backStack,
             directionRegistryList = directionRegistries,
             parentController = parentController,
-            json = json
+            json = json,
+            navigationResultState = resultState,
         )
     }
 }
@@ -92,7 +104,14 @@ class NavigationController internal constructor(
     @PublishedApi internal val json: Json,
     private val parentController: NavigationController? = null,
     private val parentRoute: NavigationRoute? = parentController?.currentRoute,
+    internal val navigationResultState: androidx.compose.runtime.MutableState<NavigationResultState> =
+        mutableStateOf(NavigationResultState.initial(backStack.size)),
 ) {
+    private val modalScopes = mutableListOf<ModalScope>()
+    private val resultCallbacks = mutableMapOf<Long, (NavigationResultCompletion) -> Unit>()
+    private var navigationMutationDepth = 0
+    private val deferredResultDispatches = mutableSetOf<Long>()
+
     @PublishedApi
     internal val directions: List<NavigationDirection> =
         directionRegistryList.flatMap(DirectionRegistry::directions)
@@ -100,6 +119,23 @@ class NavigationController internal constructor(
     internal val currentDirection: NavigationDirection
         get() = directions.find { it.routeClass == currentRoute::class }
             ?: error("No direction found for route $currentRoute")
+
+    internal fun handleSystemBack() {
+        if (currentDirection.isModal) {
+            val modalScope = modalScopes.lastOrNull { it.route == currentRoute }
+            if (modalScope?.dispatchSystemBackRequest() == true) return
+        }
+        safeNavigateUp()
+    }
+
+    internal fun registerModalScope(modalScope: ModalScope) {
+        modalScopes.remove(modalScope)
+        modalScopes.add(modalScope)
+    }
+
+    internal fun unregisterModalScope(modalScope: ModalScope) {
+        modalScopes.remove(modalScope)
+    }
 
     /**
      * Provides a [NavEntry] for a given [NavigationRoute], allowing the navigation framework
@@ -146,7 +182,217 @@ class NavigationController internal constructor(
      * destination on the stack.
      */
     fun navigateTo(route: NavigationRoute, strategy: LaunchStrategy = LaunchStrategy.Default) =
-        strategy.handleNavigation(route = route, controller = this)
+        withNavigationMutation { strategy.handleNavigation(route = route, controller = this) }
+
+    /**
+     * Confirms the result for the current destination and navigates up.
+     *
+     * The result is stored before navigating up and delivered to the launcher after the
+     * navigation attempt. If there is no destination to return to, the result is still delivered
+     * and this method throws the same exception as [navigateUp].
+     */
+    @UnsafeNavigationApi
+    inline fun <reified T> navigateUpWithResult(value: T) {
+        navigateUpWithSerializedResult(json.encodeToString(serializer<T>(), value))
+    }
+
+    /**
+     * Confirms the result for the current destination and attempts to navigate up.
+     *
+     * The result is delivered even when navigating up fails; in that case this method returns
+     * `false`.
+     */
+    @SafeNavigationApi
+    inline fun <reified T> safeNavigateUpWithResult(value: T): Boolean =
+        runCatching { navigateUpWithResult(value) }.isSuccess
+
+    @PublishedApi
+    internal fun navigateUpWithSerializedResult(valueJson: String) {
+        val launcherId = completeResult(currentResultEntry().id, valueJson, cancelled = false)
+        val navigationAttempt = runCatching { navigateUp() }
+        launcherId?.let(::dispatchCompletion)
+        navigationAttempt.getOrThrow()
+    }
+
+    @PublishedApi
+    internal fun allocateResultLauncherId(): Long {
+        val current = navigationResultState.value
+        val id = current.nextLauncherId
+        navigationResultState.value = current.copy(nextLauncherId = id + 1)
+        return id
+    }
+
+    @PublishedApi
+    internal fun <T> registerResultCallback(
+        launcherId: Long,
+        serializer: KSerializer<T>,
+        callback: (NavigationResult<T>) -> Unit,
+    ) {
+        resultCallbacks[launcherId] = { completion ->
+            if (completion.cancelled) {
+                callback(NavigationResult.Cancelled)
+            } else {
+                val jsonValue = requireNotNull(completion.valueJson)
+                callback(NavigationResult.Confirmed(json.decodeFromString(serializer, jsonValue)))
+            }
+        }
+        dispatchCompletion(launcherId)
+    }
+
+    @PublishedApi
+    internal fun unregisterResultCallback(launcherId: Long) {
+        resultCallbacks.remove(launcherId)
+    }
+
+    @PublishedApi
+    internal fun isResultLauncherPending(launcherId: Long): Boolean =
+        alignedResultState().entries.any { it.request?.launcherId == launcherId } ||
+            navigationResultState.value.completions.any { it.launcherId == launcherId }
+
+    @PublishedApi
+    internal fun navigateForResult(
+        route: NavigationRoute,
+        strategy: LaunchStrategy,
+        launcherId: Long,
+    ): Boolean {
+        if (isResultLauncherPending(launcherId)) return false
+        withNavigationMutation {
+            strategy.handleNavigation(route, this, launcherId)
+        }
+        return true
+    }
+
+    private inline fun <T> withNavigationMutation(block: () -> T): T {
+        navigationMutationDepth++
+        return try {
+            block()
+        } finally {
+            navigationMutationDepth--
+            if (navigationMutationDepth == 0) {
+                deferredResultDispatches.toList().forEach(::dispatchCompletion)
+                deferredResultDispatches.clear()
+            }
+        }
+    }
+
+    internal fun addRoute(
+        route: NavigationRoute,
+        launcherId: Long? = null,
+    ) {
+        val state = alignedResultState()
+        backStack.add(route)
+        val request = launcherId?.let(::NavigationResultRequest)
+        navigationResultState.value = state.copy(
+            entries = state.entries + NavigationResultStackEntry(state.nextEntryId, request),
+            nextEntryId = state.nextEntryId + 1,
+        )
+    }
+
+    internal fun replaceRoute(
+        index: Int,
+        route: NavigationRoute,
+        launcherId: Long? = null,
+    ) {
+        val state = alignedResultState()
+        val oldEntry = state.entries[index]
+        backStack[index] = route
+        val replacement = NavigationResultStackEntry(
+            id = state.nextEntryId,
+            request = launcherId?.let(::NavigationResultRequest),
+        )
+        val entries = state.entries.toMutableList().also { it[index] = replacement }
+        navigationResultState.value = state.copy(entries = entries, nextEntryId = state.nextEntryId + 1)
+        oldEntry.request?.let { completeResultForRequest(it, cancelled = true) }
+    }
+
+    internal fun removeRoutes(fromIndex: Int, toIndex: Int) {
+        if (fromIndex >= toIndex) return
+        val state = alignedResultState()
+        val removed = state.entries.subList(fromIndex, toIndex)
+        val requests = removed.mapNotNull { it.request }
+        backStack.removeRange(fromIndex, toIndex)
+        navigationResultState.value = state.copy(
+            entries = state.entries.take(fromIndex) + state.entries.drop(toIndex),
+        )
+        requests.forEach { completeResultForRequest(it, cancelled = true) }
+    }
+
+    internal fun removeRouteIndices(indices: List<Int>) {
+        indices.sortedDescending().forEach { removeRoutes(it, it + 1) }
+    }
+
+    internal fun replaceStackWith(
+        route: NavigationRoute,
+        launcherId: Long? = null,
+    ) {
+        removeRoutes(0, backStack.size)
+        addRoute(route, launcherId)
+    }
+
+    private fun alignedResultState(): NavigationResultState {
+        val current = navigationResultState.value
+        if (current.entries.size == backStack.size) return current
+
+        val cancelledRequests = current.entries.mapNotNull { it.request }
+        val reset = current.copy(
+            entries = List(backStack.size) { index ->
+                NavigationResultStackEntry(current.nextEntryId + index)
+            },
+            nextEntryId = current.nextEntryId + backStack.size,
+        )
+        navigationResultState.value = reset
+        cancelledRequests.forEach { completeResultForRequest(it, cancelled = true) }
+        return navigationResultState.value
+    }
+
+    private fun currentResultEntry(): NavigationResultStackEntry = alignedResultState().entries.last()
+
+    private fun completeResult(entryId: Long, valueJson: String?, cancelled: Boolean): Long? {
+        val state = alignedResultState()
+        val entryIndex = state.entries.indexOfFirst { it.id == entryId }
+        if (entryIndex < 0) return null
+        val request = state.entries[entryIndex].request ?: return null
+        val entries = state.entries.toMutableList().also {
+            it[entryIndex] = it[entryIndex].copy(request = null)
+        }
+        navigationResultState.value = state.copy(
+            entries = entries,
+            completions = state.completions.filterNot { it.launcherId == request.launcherId } +
+                NavigationResultCompletion(request.launcherId, valueJson, cancelled),
+        )
+        return request.launcherId
+    }
+
+    private fun completeResultForRequest(request: NavigationResultRequest, cancelled: Boolean) {
+        val state = navigationResultState.value
+        val exists = state.completions.any { it.launcherId == request.launcherId }
+        if (!exists) {
+            navigationResultState.value = state.copy(
+                completions = state.completions + NavigationResultCompletion(
+                    launcherId = request.launcherId,
+                    cancelled = cancelled,
+                ),
+            )
+        }
+        dispatchCompletion(request.launcherId)
+    }
+
+    private fun dispatchCompletion(launcherId: Long) {
+        if (navigationMutationDepth > 0) {
+            deferredResultDispatches += launcherId
+            return
+        }
+        val callback = resultCallbacks[launcherId] ?: return
+        val completion = navigationResultState.value.completions.firstOrNull {
+            it.launcherId == launcherId
+        } ?: return
+        navigationResultState.value = navigationResultState.value.copy(
+            completions = navigationResultState.value.completions.filterNot {
+                it.launcherId == launcherId
+            },
+        )
+        callback(completion)
+    }
 
     /**
      * Navigates to a destination via a deeplink URI.
@@ -355,7 +601,7 @@ class NavigationController internal constructor(
                             error("Could not resolve deeplink for parent $parentDeeplink")
                         }
 
-                        route != null -> backStack[currentIndex] = route
+                        route != null -> replaceRoute(currentIndex, route)
                     }
                 }.getOrElse { exception ->
                     val message = "Could not decode route for parent."
@@ -366,7 +612,7 @@ class NavigationController internal constructor(
 
             else -> {
                 val startIndex = if (inclusive) targetRouteIndex else targetRouteIndex + 1
-                backStack.removeRange(startIndex, backStack.size)
+                removeRoutes(startIndex, backStack.size)
             }
         }
     }

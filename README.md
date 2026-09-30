@@ -147,6 +147,37 @@ Navigation(
 
 `rememberAdaptiveSceneStrategies` also accepts options such as `isUsingAdaptiveLayout` and `orientation`, which the sample app derives from the current window state.
 
+### Modal destinations
+
+Mark a destination with `@Modal` to render it above the complete previous scene. The route remains
+in the same back stack. The modal component owns its scrim, animations, and dismissal behavior; it
+can use `LocalModalScope` to navigate after its own exit animation completes.
+
+```kotlin
+import com.pedrobneto.easy.navigation.core.annotation.Route
+import com.pedrobneto.easy.navigation.core.modal.LocalModalScope
+import com.pedrobneto.easy.navigation.core.modal.Modal
+
+@Modal
+@Route(CheckoutConfirmationRoute::class)
+@Composable
+fun CheckoutConfirmationScreen() {
+    val modal = LocalModalScope.current
+
+    ConfirmationCard(
+        onConfirm = { modal.navigateUp() },
+        onCancel = { modal.navigateUp() },
+    )
+}
+```
+
+The modal composable owns its surface, sizing, alignment, scrim, entry and exit animations, and
+dismissal behavior. If it animates out before closing, call `modal.navigateUp()` after its exit
+animation completes. Register the component's system-back behavior with
+`modal.setSystemBackRequestHandler { ... }` so it can use that same animated close path. The library
+provides the overlay layer and keeps the scene below intact. Modal destinations cannot be combined
+with `@AdaptivePane`, `@SinglePane`, or `@ExtraPane`.
+
 ### Navigation controller
 
 `NavigationController` owns the current back stack and exposes route and deeplink navigation.
@@ -240,6 +271,23 @@ Navigation(
 ```
 
 Nested graphs use the same pattern: create a child controller with its own initial route and pass it to a nested `Navigation` composable.
+
+### Navigation transitions
+
+Regular scene animations are configured through `NavigationTransitions`. Modal animations belong
+to each modal component because different components can use different scrims, transitions, and
+dismissal rules.
+
+```kotlin
+Navigation(
+    modifier = Modifier.fillMaxSize(),
+    initialRoute = HomeRoute,
+    directionRegistries = registries,
+    transitions = NavigationTransitions(
+        regular = DefaultRegularSceneTransitions(),
+    )
+)
+```
 
 ## Code generation
 

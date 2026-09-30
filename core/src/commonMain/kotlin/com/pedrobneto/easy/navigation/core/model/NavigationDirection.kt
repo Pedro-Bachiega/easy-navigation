@@ -31,12 +31,14 @@ abstract class NavigationDirection(
     val routeClass: KClass<out NavigationRoute>,
     val parentDeeplink: NavigationDeeplink? = null,
     val parentRouteClass: KClass<out NavigationRoute>? = null,
-    val paneStrategy: PaneStrategy = PaneStrategy.Adaptive()
+    val paneStrategy: PaneStrategy = PaneStrategy.Adaptive(),
+    val isModal: Boolean = false,
 ) {
-    internal val metadata: Map<String, Any> = mapOf(
-        METADATA_ROUTE_KEY to routeClass.qualifiedName.orEmpty(),
-        METADATA_STRATEGY_KEY to paneStrategy,
-    )
+    internal val metadata: Map<String, Any> = buildMap {
+        put(METADATA_ROUTE_KEY, routeClass.qualifiedName.orEmpty())
+        put(METADATA_STRATEGY_KEY, paneStrategy)
+        if (isModal) put(METADATA_MODAL_KEY, true)
+    }
 
     /**
      * Registers the direction into the `serializersModule` of the [NavBackStack]'s [SavedStateConfiguration]
@@ -54,5 +56,6 @@ abstract class NavigationDirection(
     internal companion object {
         const val METADATA_ROUTE_KEY = "route"
         const val METADATA_STRATEGY_KEY = "strategy"
+        const val METADATA_MODAL_KEY = "modal"
     }
 }

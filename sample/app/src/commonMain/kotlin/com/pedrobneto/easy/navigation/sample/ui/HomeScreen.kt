@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,7 +29,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,8 +44,13 @@ import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.core.rememberNavigationResultLauncher
+import com.pedrobneto.easy.navigation.core.model.NavigationResult
 import com.pedrobneto.easy.navigation.sample.model.DetailsRoute
 import com.pedrobneto.easy.navigation.sample.model.HomeRoute
+import com.pedrobneto.easy.navigation.sample.model.ModalDemoRoute
+import com.pedrobneto.easy.navigation.sample.model.ResultDemoRoute
+import com.pedrobneto.easy.navigation.sample.model.SpringModalDemoRoute
 
 @OptIn(ExperimentalMaterialApi::class)
 @AdaptivePane(.3f)
@@ -50,8 +59,24 @@ import com.pedrobneto.easy.navigation.sample.model.HomeRoute
 @Composable
 internal fun HomeScreen() {
     val navigation = LocalNavigationController.current
+    var resultMessage by remember { mutableStateOf<String?>(null) }
+    val resultLauncher = rememberNavigationResultLauncher<String> { result ->
+        resultMessage = when (result) {
+            is NavigationResult.Confirmed -> "Confirmed: ${result.value}"
+            NavigationResult.Cancelled -> "The destination was cancelled"
+        }
+    }
     HomeContent(
         onNavigateToSettings = { navigation.navigateTo("/settings") },
+        onNavigateToModal = { navigation.navigateTo(ModalDemoRoute) },
+        onNavigateToSpringModal = { navigation.navigateTo(SpringModalDemoRoute) },
+        onNavigateForResult = {
+            resultLauncher.navigateForResult(ResultDemoRoute(query = "route argument"))
+        },
+        onNavigateForResultByDeeplink = {
+            resultLauncher.navigateForResult("/result-demo/deeplink-argument")
+        },
+        resultMessage = resultMessage,
         onNavigateToRoute = {
             navigation.navigateTo(route = it, strategy = LaunchStrategy.SingleTop())
         }
@@ -61,6 +86,11 @@ internal fun HomeScreen() {
 @Composable
 private fun HomeContent(
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToModal: () -> Unit = {},
+    onNavigateToSpringModal: () -> Unit = {},
+    onNavigateForResult: () -> Unit = {},
+    onNavigateForResultByDeeplink: () -> Unit = {},
+    resultMessage: String? = null,
     onNavigateToRoute: (NavigationRoute) -> Unit = {}
 ) {
     val items = remember {
@@ -126,6 +156,19 @@ private fun HomeContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Button(onClick = onNavigateToModal) {
+                        Text("Open modal example")
+                    }
+                    Button(onClick = onNavigateToSpringModal) {
+                        Text("Open spring modal")
+                    }
+                    Button(onClick = onNavigateForResult) {
+                        Text("Open route and receive a result")
+                    }
+                    Button(onClick = onNavigateForResultByDeeplink) {
+                        Text("Open deeplink and receive a result")
+                    }
+                    resultMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 }
             }
             items(items, key = { it }) { item ->
