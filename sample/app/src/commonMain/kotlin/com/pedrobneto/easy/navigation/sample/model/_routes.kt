@@ -23,3 +23,9 @@ data object ExtraDetailsRoute : NavigationRoute
 
 @Serializable
 data object SettingsRoute : NavigationRoute
+
+@Serializable
+data object ModalDemoRoute : NavigationRoute
+
+@Serializable
+data object SpringModalDemoRoute : NavigationRoute

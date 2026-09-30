@@ -15,7 +15,7 @@ internal data class Direction(
     val parentRoutePackageName: String?,
     val parentRouteClassName: String?,
     val parentDeeplink: String?,
-    val paneStrategy: PaneStrategy,
+    val presentationStrategy: PresentationStrategy,
     val functionPackageName: String,
     val functionName: String,
     val routeParameterName: String?,

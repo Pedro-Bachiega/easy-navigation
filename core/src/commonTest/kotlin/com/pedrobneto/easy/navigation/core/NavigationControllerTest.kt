@@ -8,6 +8,7 @@ import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.core.modal.ModalScope
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
@@ -68,6 +69,17 @@ class NavigationControllerTest {
         object : NavigationDirection(
             deeplinks = emptyList(),
             routeClass = TestSettingsRoute::class
+        ) {
+            override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
+
+            @Composable
+            override fun Draw(route: NavigationRoute) {
+            }
+        },
+        object : NavigationDirection(
+            deeplinks = emptyList(),
+            routeClass = TestModalRoute::class,
+            isModal = true
         ) {
             override fun register(builder: PolymorphicModuleBuilder<NavigationRoute>) = Unit
 
@@ -158,6 +170,58 @@ class NavigationControllerTest {
         controller.navigateUp()
         assertEquals(1, controller.backStack.size)
         assertEquals(TestHomeRoute, controller.backStack.last())
+    }
+
+    @Test
+    fun `modal scope delegates navigation operations to its controller`() {
+        val modalScope = ModalScope(controller)
+
+        modalScope.navigateTo(TestDetailsRoute(1))
+
+        assertEquals(TestDetailsRoute(1), modalScope.currentRoute)
+        assertEquals(controller.currentIndex, modalScope.currentIndex)
+        assertTrue(modalScope.canNavigateUp)
+        assertTrue(modalScope.safeNavigateUp())
+        assertEquals(TestHomeRoute, controller.currentRoute)
+    }
+
+    @Test
+    fun `modal scope delegates deeplink navigation operations`() {
+        val modalScope = ModalScope(controller)
+
+        modalScope.navigateTo("/details/2")
+
+        assertEquals(TestDetailsRoute(2), controller.currentRoute)
+        assertTrue(modalScope.safeNavigateTo("/details/3"))
+        assertEquals(TestDetailsRoute(3), controller.currentRoute)
+        assertFalse(modalScope.safeNavigateTo("/missing"))
+        assertEquals(TestDetailsRoute(3), controller.currentRoute)
+    }
+
+    @Test
+    fun `modal scope delegates pop up to operations`() {
+        val modalScope = ModalScope(controller)
+        controller.navigateTo(TestDetailsRoute(1))
+        controller.navigateTo(TestExtraDetailsRoute)
+
+        modalScope.popUpTo(TestHomeRoute::class)
+
+        assertEquals(listOf(TestHomeRoute), controller.backStack.toList())
+
+        controller.navigateTo(TestDetailsRoute(2))
+        assertTrue(modalScope.safePopUpTo(TestHomeRoute, inclusive = false))
+        assertEquals(listOf(TestHomeRoute), controller.backStack.toList())
+        assertFalse(modalScope.safePopUpTo(TestSettingsRoute))
+    }
+
+    @Test
+    fun `modal scope delegates navigate up`() {
+        val modalScope = ModalScope(controller)
+        controller.navigateTo(TestDetailsRoute(1))
+
+        modalScope.navigateUp()
+
+        assertEquals(TestHomeRoute, controller.currentRoute)
     }
 
     @Test
@@ -259,6 +323,87 @@ class NavigationControllerTest {
 
         assertEquals(2, controller.backStack.size)
         assertEquals(TestDetailsRoute(1), controller.backStack.last())
+    }
+
+    @Test
+    fun `system back dismisses modal through the navigation controller`() {
+        controller.navigateTo(TestModalRoute)
+
+        controller.handleSystemBack()
+
+        assertEquals(TestHomeRoute, controller.currentRoute)
+    }
+
+    @Test
+    fun `system back delegates modal dismissal to the registered modal component`() {
+        controller.navigateTo(TestModalRoute)
+        val modalScope = ModalScope(controller)
+        var backRequests = 0
+        modalScope.setSystemBackRequestHandler { backRequests++ }
+        controller.registerModalScope(modalScope)
+
+        controller.handleSystemBack()
+
+        assertEquals(1, backRequests)
+        assertEquals(TestModalRoute, controller.currentRoute)
+    }
+
+    @Test
+    fun `system back is delegated to the most recently registered scope for the current modal`() {
+        controller.navigateTo(TestModalRoute)
+        val firstScope = ModalScope(controller)
+        val secondScope = ModalScope(controller)
+        var firstRequests = 0
+        var secondRequests = 0
+        firstScope.setSystemBackRequestHandler { firstRequests++ }
+        secondScope.setSystemBackRequestHandler { secondRequests++ }
+        controller.registerModalScope(firstScope)
+        controller.registerModalScope(secondScope)
+
+        controller.handleSystemBack()
+
+        assertEquals(0, firstRequests)
+        assertEquals(1, secondRequests)
+        assertEquals(TestModalRoute, controller.currentRoute)
+    }
+
+    @Test
+    fun `unregistered modal scope no longer handles system back`() {
+        controller.navigateTo(TestModalRoute)
+        val modalScope = ModalScope(controller)
+        var backRequests = 0
+        modalScope.setSystemBackRequestHandler { backRequests++ }
+        controller.registerModalScope(modalScope)
+        controller.unregisterModalScope(modalScope)
+
+        controller.handleSystemBack()
+
+        assertEquals(0, backRequests)
+        assertEquals(TestHomeRoute, controller.currentRoute)
+    }
+
+    @Test
+    fun `clearing modal back handler restores controller fallback`() {
+        controller.navigateTo(TestModalRoute)
+        val modalScope = ModalScope(controller)
+        var backRequests = 0
+        modalScope.setSystemBackRequestHandler { backRequests++ }
+        controller.registerModalScope(modalScope)
+        modalScope.setSystemBackRequestHandler(null)
+
+        controller.handleSystemBack()
+
+        assertEquals(0, backRequests)
+        assertEquals(TestHomeRoute, controller.currentRoute)
+    }
+
+    @Test
+    fun `explicit navigate up dismisses a modal`() {
+        controller.navigateTo(TestModalRoute)
+
+        controller.navigateUp()
+
+        assertEquals(TestHomeRoute, controller.currentRoute)
     }
 
     @Test
@@ -517,6 +662,8 @@ class NavigationControllerTest {
 
     @Serializable
     data object TestSettingsRoute : NavigationRoute
+    @Serializable
+    data object TestModalRoute : NavigationRoute
 
     @Serializable
     data object TestExtraDetailsRoute : NavigationRoute

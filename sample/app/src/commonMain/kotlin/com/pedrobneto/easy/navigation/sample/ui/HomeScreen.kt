@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,8 @@ import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.sample.model.DetailsRoute
 import com.pedrobneto.easy.navigation.sample.model.HomeRoute
+import com.pedrobneto.easy.navigation.sample.model.ModalDemoRoute
+import com.pedrobneto.easy.navigation.sample.model.SpringModalDemoRoute
 
 @OptIn(ExperimentalMaterialApi::class)
 @AdaptivePane(.3f)
@@ -52,6 +55,8 @@ internal fun HomeScreen() {
     val navigation = LocalNavigationController.current
     HomeContent(
         onNavigateToSettings = { navigation.navigateTo("/settings") },
+        onNavigateToModal = { navigation.navigateTo(ModalDemoRoute) },
+        onNavigateToSpringModal = { navigation.navigateTo(SpringModalDemoRoute) },
         onNavigateToRoute = {
             navigation.navigateTo(route = it, strategy = LaunchStrategy.SingleTop())
         }
@@ -61,6 +66,8 @@ internal fun HomeScreen() {
 @Composable
 private fun HomeContent(
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToModal: () -> Unit = {},
+    onNavigateToSpringModal: () -> Unit = {},
     onNavigateToRoute: (NavigationRoute) -> Unit = {}
 ) {
     val items = remember {
@@ -126,6 +133,12 @@ private fun HomeContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Button(onClick = onNavigateToModal) {
+                        Text("Open modal example")
+                    }
+                    Button(onClick = onNavigateToSpringModal) {
+                        Text("Open spring modal")
+                    }
                 }
             }
             items(items, key = { it }) { item ->

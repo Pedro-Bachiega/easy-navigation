@@ -6,6 +6,7 @@ import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
@@ -18,6 +19,9 @@ import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.annotation.Scope
+import com.pedrobneto.easy.navigation.core.adaptive.AdaptivePane
+import com.pedrobneto.easy.navigation.core.modal.Modal
+import com.pedrobneto.easy.navigation.processor.library.model.PresentationStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import io.mockk.every
 import io.mockk.mockk
@@ -112,6 +116,42 @@ class DirectionProcessTest {
             result.parentRoutePackageName
         )
         assertEquals("SampleParentRoute", result.parentRouteClassName)
+    }
+
+    @Test
+    fun `GIVEN a function with Modal WHEN processing THEN generated direction marks modal`() {
+        val function = mockFunctionDeclaration(
+            functionName = "ModalScreen",
+            routeAnnotations = listOf(Route(SampleRoute::class)),
+            modalAnnotations = listOf(Modal())
+        )
+        val fileNameSlot = slot<String>()
+        val outputStream = ByteArrayOutputStream()
+        every {
+            codeGenerator.createNewFile(any(), any(), capture(fileNameSlot), any())
+        } returns outputStream
+
+        val result = codeGenerator.createDirection(logger, function, "testModule", true)
+
+        assertNotNull(result)
+        assertEquals(
+            PresentationStrategy.Modal,
+            result.presentationStrategy
+        )
+        assertContains(outputStream.toString(), "isModal = true")
+    }
+
+    @Test
+    fun `GIVEN a function with Modal and pane annotation WHEN processing THEN it should return null`() {
+        val function = mockFunctionDeclaration(
+            routeAnnotations = listOf(Route(SampleRoute::class)),
+            modalAnnotations = listOf(Modal()),
+            adaptivePaneAnnotations = listOf(AdaptivePane())
+        )
+
+        val result = codeGenerator.createDirection(logger, function, "testModule", true)
+
+        assertNull(result)
     }
 
     @Test
@@ -220,7 +260,9 @@ class DirectionProcessTest {
         routeAnnotations: List<Route> = emptyList(),
         parentRouteAnnotations: List<ParentRoute> = emptyList(),
         deeplinkAnnotations: List<Deeplink> = emptyList(),
-        scopeAnnotations: List<Scope> = emptyList()
+        scopeAnnotations: List<Scope> = emptyList(),
+        modalAnnotations: List<Modal> = emptyList(),
+        adaptivePaneAnnotations: List<AdaptivePane> = emptyList()
     ): KSFunctionDeclaration {
         val function = mockk<KSFunctionDeclaration>()
         val file = mockk<KSFile>()
@@ -241,6 +283,8 @@ class DirectionProcessTest {
             addAll(parentRouteAnnotations.map { it.toKsAnnotation(ParentRoute::class, "value") })
             addAll(deeplinkAnnotations.map { it.toKsAnnotation(Deeplink::class, "value") })
             addAll(scopeAnnotations.map { it.toKsAnnotation(Scope::class, "value") })
+            addAll(modalAnnotations.map { it.toKsAnnotation(Modal::class) })
+            addAll(adaptivePaneAnnotations.map { it.toKsAnnotation(AdaptivePane::class, "ratio") })
         }.asSequence()
 
         return function
@@ -266,10 +310,21 @@ class DirectionProcessTest {
     private fun Scope.toKsAnnotation(annotationClass: KClass<out Annotation>, argumentName: String) =
         mockAnnotation(annotationClass, argumentName, value)
 
+    private fun Modal.toKsAnnotation(annotationClass: KClass<out Annotation>) =
+        mockAnnotation(annotationClass, emptyList())
+
+    private fun AdaptivePane.toKsAnnotation(annotationClass: KClass<out Annotation>, argumentName: String) =
+        mockAnnotation(annotationClass, argumentName, ratio)
+
     private fun mockAnnotation(
         annotationClass: KClass<out Annotation>,
         argumentName: String,
         argumentValue: Any?
+    ): KSAnnotation = mockAnnotation(annotationClass, listOf(argumentName to argumentValue))
+
+    private fun mockAnnotation(
+        annotationClass: KClass<out Annotation>,
+        arguments: List<Pair<String, Any?>>
     ): KSAnnotation {
         val annotation = mockk<KSAnnotation>()
         val shortName = mockName(annotationClass.simpleName.orEmpty())
@@ -277,16 +332,18 @@ class DirectionProcessTest {
         val declaration = mockk<KSDeclaration>()
         val type = mockk<KSType>()
         val typeReference = mockk<KSTypeReference>()
-        val argument = mockk<KSValueArgument>()
 
         every { annotation.shortName } returns shortName
         every { annotation.annotationType } returns typeReference
         every { typeReference.resolve() } returns type
         every { type.declaration } returns declaration
         every { declaration.qualifiedName } returns qualifiedName
-        every { annotation.arguments } returns listOf(argument)
-        every { argument.name } returns mockName(argumentName)
-        every { argument.value } returns argumentValue
+        every { annotation.arguments } returns arguments.map { (name, value) ->
+            val argument = mockk<KSValueArgument>()
+            every { argument.name } returns mockName(name)
+            every { argument.value } returns value
+            argument
+        }
 
         return annotation
     }
@@ -316,6 +373,7 @@ class DirectionProcessTest {
         val navigationRouteDeclaration = mockk<KSClassDeclaration>()
 
         every { type.declaration } returns declaration
+        every { declaration.classKind } returns ClassKind.CLASS
         every { declaration.packageName } returns mockName(packageName)
         every { declaration.simpleName } returns mockName(qualifiedClassName.substringAfterLast('.'))
         every { declaration.qualifiedName } returns mockName(qualifiedClassName)
@@ -352,4 +410,5 @@ class DirectionProcessTest {
 
     data object SampleRoute : NavigationRoute
     data object SampleParentRoute : NavigationRoute
+
 }

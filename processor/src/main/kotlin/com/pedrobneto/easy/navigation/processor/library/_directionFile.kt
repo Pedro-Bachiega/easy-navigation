@@ -4,6 +4,7 @@ import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
@@ -16,9 +17,11 @@ import com.pedrobneto.easy.navigation.core.annotation.ParentDeeplink
 import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.annotation.Scope
+import com.pedrobneto.easy.navigation.core.modal.Modal
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.processor.library.model.Direction
 import com.pedrobneto.easy.navigation.processor.library.model.PaneStrategy
+import com.pedrobneto.easy.navigation.processor.library.model.PresentationStrategy
 import com.pedrobneto.easy.navigation.processor.library.model.QualifiedName
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
@@ -117,7 +120,7 @@ internal fun KSFunctionDeclaration.extractDirection(
         parentRouteClassName = parentRouteType?.declaration?.simpleName?.asString(),
         parentDeeplink = annotationsByType(ParentDeeplink::class).firstOrNull()
             ?.stringArgument("value"),
-        paneStrategy = getPaneStrategy(logger) ?: return null,
+        presentationStrategy = getPresentationStrategy(logger) ?: return null,
         functionPackageName = packageName.asString(),
         functionName = simpleName.asString(),
         routeParameterName = routeParameterName,
@@ -157,7 +160,16 @@ internal fun Direction.createDirectionFile(generator: CodeGenerator) {
                     ClassName.bestGuess(it)
                 )
             }
-            addSuperclassConstructorParameter("paneStrategy = %L", paneStrategy.code())
+            when (val presentation = presentationStrategy) {
+                is PresentationStrategy.Pane -> {
+                    addSuperclassConstructorParameter(
+                        "paneStrategy = %L",
+                        presentation.strategy.code()
+                    )
+                }
+
+                PresentationStrategy.Modal -> addSuperclassConstructorParameter("isModal = true")
+            }
         }
         .addFunction(registerFunction(routeClass))
         .addFunction(drawFunction(function))
@@ -217,6 +229,29 @@ private fun KSFunctionDeclaration.getPaneStrategy(logger: KSPLogger): PaneStrate
     return extraPane ?: singlePane ?: adaptivePane ?: PaneStrategy.Adaptive()
 }
 
+private fun KSFunctionDeclaration.getPresentationStrategy(
+    logger: KSPLogger
+): PresentationStrategy? {
+    val modal = annotationsByType(Modal::class).firstOrNull()
+    val hasPaneAnnotation = hasAnnotation(AdaptivePane::class) ||
+            hasAnnotation(SinglePane::class) ||
+            annotationsByType(ExtraPane::class).any()
+
+    if (modal != null && hasPaneAnnotation) {
+        logger.error(
+            "Navigation destination ${simpleName.asString()} cannot combine @Modal with a pane annotation.",
+            this
+        )
+        return null
+    }
+
+    return if (modal != null) {
+        PresentationStrategy.Modal
+    } else {
+        getPaneStrategy(logger)?.let(PresentationStrategy::Pane)
+    }
+}
+
 private fun shouldSkipSourceSet(
     moduleName: String,
     filePath: String,
@@ -239,7 +274,7 @@ private fun KSType.isNavigationRoute(): Boolean =
                 ?.getAllSuperTypes()
                 ?.any { it.qualifiedName() == NavigationRoute::class.qualifiedName } == true
 
-private fun com.google.devtools.ksp.symbol.KSAnnotation.floatArgument(name: String): Float? =
+private fun KSAnnotation.floatArgument(name: String): Float? =
     arguments.firstOrNull { it.name?.asString() == name }?.value as? Float
 
 private fun KSPLogger.errorAndNull(message: String, symbol: KSFunctionDeclaration): Nothing? {

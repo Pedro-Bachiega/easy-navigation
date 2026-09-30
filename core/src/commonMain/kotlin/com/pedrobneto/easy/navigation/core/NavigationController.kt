@@ -19,6 +19,7 @@ import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationDeeplink
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.core.modal.ModalScope
 import com.pedrobneto.easy.navigation.test.KoverExcludes
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
@@ -93,6 +94,8 @@ class NavigationController internal constructor(
     private val parentController: NavigationController? = null,
     private val parentRoute: NavigationRoute? = parentController?.currentRoute,
 ) {
+    private val modalScopes = mutableListOf<ModalScope>()
+
     @PublishedApi
     internal val directions: List<NavigationDirection> =
         directionRegistryList.flatMap(DirectionRegistry::directions)
@@ -100,6 +103,23 @@ class NavigationController internal constructor(
     internal val currentDirection: NavigationDirection
         get() = directions.find { it.routeClass == currentRoute::class }
             ?: error("No direction found for route $currentRoute")
+
+    internal fun handleSystemBack() {
+        if (currentDirection.isModal) {
+            val modalScope = modalScopes.lastOrNull { it.route == currentRoute }
+            if (modalScope?.dispatchSystemBackRequest() == true) return
+        }
+        safeNavigateUp()
+    }
+
+    internal fun registerModalScope(modalScope: ModalScope) {
+        modalScopes.remove(modalScope)
+        modalScopes.add(modalScope)
+    }
+
+    internal fun unregisterModalScope(modalScope: ModalScope) {
+        modalScopes.remove(modalScope)
+    }
 
     /**
      * Provides a [NavEntry] for a given [NavigationRoute], allowing the navigation framework

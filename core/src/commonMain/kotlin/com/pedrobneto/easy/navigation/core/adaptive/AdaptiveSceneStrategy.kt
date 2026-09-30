@@ -20,6 +20,7 @@ import androidx.navigation3.scene.SceneStrategyScope
 import androidx.navigation3.ui.NavDisplay
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.core.modal.rememberModalSceneStrategy
 
 @ExperimentalMaterial3AdaptiveApi
 @Composable
@@ -31,7 +32,7 @@ fun rememberAdaptiveSceneStrategy(
         previous: NavEntry<NavigationRoute>
     ) -> Unit = { _, _ -> }
 ): SceneStrategy<NavigationRoute> {
-    val strategies = rememberAdaptiveSceneStrategies(
+    val strategies = rememberDefaultSceneStrategies(
         isUsingAdaptiveLayout = isUsingAdaptiveLayout,
         orientation = orientation,
         divider = divider
@@ -50,20 +51,21 @@ fun rememberAdaptiveSceneStrategy(
  */
 @ExperimentalMaterial3AdaptiveApi
 @Composable
-fun rememberAdaptiveSceneStrategies(
+fun rememberDefaultSceneStrategies(
     isUsingAdaptiveLayout: Boolean = true,
     orientation: AdaptiveSceneStrategy.Orientation = AdaptiveSceneStrategy.Orientation.Horizontal,
     divider: @Composable (
         current: NavEntry<NavigationRoute>,
         previous: NavEntry<NavigationRoute>
-    ) -> Unit = { _, _ -> }
+    ) -> Unit = { _, _ -> },
 ): List<SceneStrategy<NavigationRoute>> {
     val listDetailStrategy = rememberListDetailSceneStrategy<NavigationRoute>()
     val adaptiveSceneStrategy = remember(isUsingAdaptiveLayout, orientation, divider) {
         AdaptiveSceneStrategy(isUsingAdaptiveLayout, orientation, divider)
     }
-    return remember(adaptiveSceneStrategy, listDetailStrategy) {
-        listOf(adaptiveSceneStrategy, listDetailStrategy)
+    val modalSceneStrategy = rememberModalSceneStrategy(adaptiveSceneStrategy)
+    return remember(adaptiveSceneStrategy, listDetailStrategy, modalSceneStrategy) {
+        listOf(modalSceneStrategy, adaptiveSceneStrategy, listDetailStrategy)
     }
 }
 
