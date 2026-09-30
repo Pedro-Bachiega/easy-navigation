@@ -55,9 +55,7 @@ fun Navigation(
     entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator()),
     transitions: NavigationTransitions = NavigationTransitions(),
-    sceneStrategies: List<SceneStrategy<NavigationRoute>> = rememberDefaultSceneStrategies(
-        modalTransitions = transitions.modal
-    ),
+    sceneStrategies: List<SceneStrategy<NavigationRoute>> = rememberDefaultSceneStrategies(),
     sceneDecoratorStrategies: List<SceneDecoratorStrategy<NavigationRoute>> = emptyList(),
     sharedTransitionScope: SharedTransitionScope? = null,
     sizeTransform: SizeTransform? = null,

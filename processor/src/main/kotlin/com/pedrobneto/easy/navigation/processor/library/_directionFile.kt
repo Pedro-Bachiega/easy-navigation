@@ -6,7 +6,6 @@ import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.pedrobneto.easy.navigation.core.adaptive.AdaptivePane
@@ -19,7 +18,6 @@ import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.annotation.Scope
 import com.pedrobneto.easy.navigation.core.modal.Modal
-import com.pedrobneto.easy.navigation.core.modal.InheritModalTransitions
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.processor.library.model.Direction
 import com.pedrobneto.easy.navigation.processor.library.model.PaneStrategy
@@ -170,23 +168,7 @@ internal fun Direction.createDirectionFile(generator: CodeGenerator) {
                     )
                 }
 
-                is PresentationStrategy.Modal -> {
-                    val transitions = presentation.transitionsQualifiedName
-                        ?.let(ClassName::bestGuess)
-                    val transitionsExpression = transitions?.let {
-                        if (presentation.transitionsIsObject) "%T" else "%T()"
-                    }
-                    addSuperclassConstructorParameter(
-                        buildString {
-                            append("modalConfig = %T(dismissible = %L")
-                            if (transitionsExpression != null) append(", transitions = $transitionsExpression")
-                            append(")")
-                        },
-                        ClassName("com.pedrobneto.easy.navigation.core.modal", "ModalConfig"),
-                        presentation.dismissible,
-                        *listOfNotNull(transitions).toTypedArray()
-                    )
-                }
+                PresentationStrategy.Modal -> addSuperclassConstructorParameter("isModal = true")
             }
         }
         .addFunction(registerFunction(routeClass))
@@ -263,19 +245,11 @@ private fun KSFunctionDeclaration.getPresentationStrategy(
         return null
     }
 
-    return modal?.let {
-        val transitionsType = it.typeArgument("transitions")
-        val transitionsQualifiedName = transitionsType
-            ?.qualifiedName()
-            ?.takeUnless { it == InheritModalTransitions::class.qualifiedName }
-        PresentationStrategy.Modal(
-            dismissible = it.booleanArgument("dismissible") ?: true,
-            transitionsQualifiedName = transitionsQualifiedName,
-            transitionsIsObject = transitionsType?.declaration?.let { declaration ->
-                (declaration as? KSClassDeclaration)?.classKind == ClassKind.OBJECT
-            } == true,
-        )
-    } ?: getPaneStrategy(logger)?.let(PresentationStrategy::Pane)
+    return if (modal != null) {
+        PresentationStrategy.Modal
+    } else {
+        getPaneStrategy(logger)?.let(PresentationStrategy::Pane)
+    }
 }
 
 private fun shouldSkipSourceSet(
@@ -302,9 +276,6 @@ private fun KSType.isNavigationRoute(): Boolean =
 
 private fun KSAnnotation.floatArgument(name: String): Float? =
     arguments.firstOrNull { it.name?.asString() == name }?.value as? Float
-
-private fun KSAnnotation.booleanArgument(name: String): Boolean? =
-    arguments.firstOrNull { it.name?.asString() == name }?.value as? Boolean
 
 private fun KSPLogger.errorAndNull(message: String, symbol: KSFunctionDeclaration): Nothing? {
     error(message, symbol)

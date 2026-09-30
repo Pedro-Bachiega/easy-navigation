@@ -15,15 +15,12 @@ import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeReference
 import com.google.devtools.ksp.symbol.KSValueArgument
 import com.google.devtools.ksp.symbol.KSValueParameter
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import com.pedrobneto.easy.navigation.core.annotation.Deeplink
 import com.pedrobneto.easy.navigation.core.annotation.ParentRoute
 import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.annotation.Scope
 import com.pedrobneto.easy.navigation.core.adaptive.AdaptivePane
 import com.pedrobneto.easy.navigation.core.modal.Modal
-import com.pedrobneto.easy.navigation.core.transition.ModalTransitions
 import com.pedrobneto.easy.navigation.processor.library.model.PresentationStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import io.mockk.every
@@ -122,11 +119,11 @@ class DirectionProcessTest {
     }
 
     @Test
-    fun `GIVEN a function with Modal WHEN processing THEN generated direction contains modal config`() {
+    fun `GIVEN a function with Modal WHEN processing THEN generated direction marks modal`() {
         val function = mockFunctionDeclaration(
             functionName = "ModalScreen",
             routeAnnotations = listOf(Route(SampleRoute::class)),
-            modalAnnotations = listOf(Modal(dismissible = false))
+            modalAnnotations = listOf(Modal())
         )
         val fileNameSlot = slot<String>()
         val outputStream = ByteArrayOutputStream()
@@ -138,38 +135,10 @@ class DirectionProcessTest {
 
         assertNotNull(result)
         assertEquals(
-            PresentationStrategy.Modal(dismissible = false),
+            PresentationStrategy.Modal,
             result.presentationStrategy
         )
-        assertContains(outputStream.toString(), "modalConfig = ModalConfig(dismissible = false)")
-    }
-
-    @Test
-    fun `GIVEN a modal transition class WHEN processing THEN generated direction contains it`() {
-        val function = mockFunctionDeclaration(
-            functionName = "CustomModalScreen",
-            routeAnnotations = listOf(Route(SampleRoute::class)),
-            modalAnnotations = listOf(Modal(transitions = TestModalTransitions::class))
-        )
-        val outputStream = ByteArrayOutputStream()
-        every { codeGenerator.createNewFile(any(), any(), any(), any()) } returns outputStream
-
-        val result = codeGenerator.createDirection(logger, function, "testModule", true)
-
-        assertNotNull(result)
-        assertEquals(
-            PresentationStrategy.Modal(
-                dismissible = true,
-                transitionsQualifiedName = TestModalTransitions::class.qualifiedName,
-                transitionsIsObject = false,
-            ),
-            result.presentationStrategy
-        )
-        assertContains(
-            outputStream.toString(),
-            "modalConfig = ModalConfig(dismissible = true, transitions = " +
-                    "DirectionProcessTest.TestModalTransitions())"
-        )
+        assertContains(outputStream.toString(), "isModal = true")
     }
 
     @Test
@@ -342,13 +311,7 @@ class DirectionProcessTest {
         mockAnnotation(annotationClass, argumentName, value)
 
     private fun Modal.toKsAnnotation(annotationClass: KClass<out Annotation>) =
-        mockAnnotation(
-            annotationClass,
-            listOf(
-                "dismissible" to dismissible,
-                "transitions" to transitions.qualifiedName.orEmpty().let(::mockType),
-            )
-        )
+        mockAnnotation(annotationClass, emptyList())
 
     private fun AdaptivePane.toKsAnnotation(annotationClass: KClass<out Annotation>, argumentName: String) =
         mockAnnotation(annotationClass, argumentName, ratio)
@@ -448,10 +411,4 @@ class DirectionProcessTest {
     data object SampleRoute : NavigationRoute
     data object SampleParentRoute : NavigationRoute
 
-    class TestModalTransitions : ModalTransitions {
-        override val contentEnter: EnterTransition = EnterTransition.None
-        override val contentExit: ExitTransition = ExitTransition.None
-        override val scrimEnter: EnterTransition = EnterTransition.None
-        override val scrimExit: ExitTransition = ExitTransition.None
-    }
 }

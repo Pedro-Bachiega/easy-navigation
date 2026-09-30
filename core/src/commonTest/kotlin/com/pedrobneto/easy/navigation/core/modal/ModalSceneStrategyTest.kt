@@ -2,6 +2,7 @@ package com.pedrobneto.easy.navigation.core.modal
 
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.OverlayScene
+import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
 import com.pedrobneto.easy.navigation.core.model.NavigationDirection
@@ -17,13 +18,13 @@ private data object ModalRoute : NavigationRoute
 private fun entry(
     contentKey: String,
     route: NavigationRoute,
-    modalConfig: ModalConfig? = null,
+    isModal: Boolean = false,
 ): NavEntry<NavigationRoute> = NavEntry(
     key = route,
     contentKey = contentKey,
     metadata = buildMap {
         put(NavigationDirection.METADATA_ROUTE_KEY, route::class.qualifiedName.orEmpty())
-        modalConfig?.let { put(NavigationDirection.METADATA_MODAL_KEY, it) }
+        if (isModal) put(NavigationDirection.METADATA_MODAL_KEY, true)
     }
 ) {}
 
@@ -41,7 +42,7 @@ class ModalSceneStrategyTest {
     @Test
     fun `modal entry overlays the complete previous stack`() {
         val background = entry("background", BackgroundRoute)
-        val modal = entry("modal", ModalRoute, ModalConfig(dismissible = false))
+        val modal = entry("modal", ModalRoute, isModal = true)
 
         val scene = strategy.run { scope.calculateScene(listOf(background, modal)) }
 
@@ -53,8 +54,8 @@ class ModalSceneStrategyTest {
     @Test
     fun `modal can be stacked over another modal`() {
         val background = entry("background", BackgroundRoute)
-        val firstModal = entry("first", ModalRoute, ModalConfig())
-        val secondModal = entry("second", ModalRoute, ModalConfig())
+        val firstModal = entry("first", ModalRoute, isModal = true)
+        val secondModal = entry("second", ModalRoute, isModal = true)
 
         val scene = strategy.run {
             scope.calculateScene(listOf(background, firstModal, secondModal))
@@ -69,7 +70,7 @@ class ModalSceneStrategyTest {
     fun `modal without a scene base fails clearly`() {
         val exception = assertFailsWith<IllegalArgumentException> {
             strategy.run {
-                scope.calculateScene(listOf(entry("modal", ModalRoute, ModalConfig())))
+                scope.calculateScene(listOf(entry("modal", ModalRoute, isModal = true)))
             }
         }
 
@@ -78,5 +79,23 @@ class ModalSceneStrategyTest {
                     "Navigate to it from another destination instead of using it as the root.",
             exception.message
         )
+    }
+
+    @Test
+    fun `modal is not created when base scene strategy cannot handle previous entries`() {
+        val strategyWithoutBaseScene = ModalSceneStrategy(
+            SceneStrategy<NavigationRoute> { null }
+        )
+
+        val scene = strategyWithoutBaseScene.run {
+            scope.calculateScene(
+                listOf(
+                    entry("background", BackgroundRoute),
+                    entry("modal", ModalRoute, isModal = true),
+                )
+            )
+        }
+
+        assertEquals(null, scene)
     }
 }

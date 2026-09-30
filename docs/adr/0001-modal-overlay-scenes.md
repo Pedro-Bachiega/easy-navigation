@@ -18,9 +18,9 @@ the scene below the modal using the same adaptive strategy chain and includes th
 in the overlay's entry list, so the base is composed exactly once while the overlay remains in the
 Navigation 3 transition pipeline. Multiple modals can be stacked recursively.
 
-The library owns the transparent interaction layer and dismiss policy. The modal composable owns its
-surface, dimensions, alignment, and visual styling. System back and outside taps respect the
-destination's `dismissible` flag, while explicit `navigateUp()` calls are always allowed.
+The modal composable owns its surface, dimensions, alignment, scrim, animations, and dismissal
+policy. `LocalModalScope` provides navigation operations to modal content. Components that animate
+out should finish that animation before calling an operation that removes or replaces the modal.
 
 Modal declarations cannot be combined with pane annotations because pane layout and modal
 presentation are separate, competing presentation modes.
@@ -30,4 +30,7 @@ presentation are separate, competing presentation modes.
 - Existing adaptive scenes remain intact below the modal.
 - Modal routes work with the existing back stack, serialization, and deeplink infrastructure.
 - A modal cannot be the root route because an overlay requires a non-empty base scene.
-- Custom modal animations are deferred until a dedicated transition API is designed.
+- Modal components can use independent entry and exit animations without a library-level animation
+  policy.
+- Navigation performed directly through the global controller can remove a modal before its own
+  exit animation completes.

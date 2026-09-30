@@ -150,42 +150,33 @@ Navigation(
 ### Modal destinations
 
 Mark a destination with `@Modal` to render it above the complete previous scene. The route remains
-in the same back stack, so an explicit `navigateUp()` closes it. By default, system back and taps
-outside the modal content dismiss it; use `dismissible = false` for a blocking modal.
+in the same back stack. The modal component owns its scrim, animations, and dismissal behavior; it
+can use `LocalModalScope` to navigate after its own exit animation completes.
 
 ```kotlin
-import com.pedrobneto.easy.navigation.core.LocalNavigationController
 import com.pedrobneto.easy.navigation.core.annotation.Route
+import com.pedrobneto.easy.navigation.core.modal.LocalModalScope
 import com.pedrobneto.easy.navigation.core.modal.Modal
 
 @Modal
 @Route(CheckoutConfirmationRoute::class)
 @Composable
 fun CheckoutConfirmationScreen() {
-    val navigation = LocalNavigationController.current
+    val modal = LocalModalScope.current
 
     ConfirmationCard(
-        onConfirm = { navigation.navigateUp() },
-        onCancel = { navigation.navigateUp() },
+        onConfirm = { modal.navigateUp() },
+        onCancel = { modal.navigateUp() },
     )
 }
 ```
 
-The modal composable owns its surface, sizing, alignment, and optional visual scrim. The library
+The modal composable owns its surface, sizing, alignment, scrim, entry and exit animations, and
+dismissal behavior. If it animates out before closing, call `modal.navigateUp()` after its exit
+animation completes. Register the component's system-back behavior with
+`modal.setSystemBackRequestHandler { ... }` so it can use that same animated close path. The library
 provides the overlay layer and keeps the scene below intact. Modal destinations cannot be combined
 with `@AdaptivePane`, `@SinglePane`, or `@ExtraPane`.
-
-The modal can optionally provide its own no-argument transition policy. When omitted, it inherits
-the `modal` policy configured in `NavigationTransitions`:
-
-```kotlin
-@Modal(transitions = CheckoutModalTransitions::class)
-@Route(CheckoutConfirmationRoute::class)
-@Composable
-fun CheckoutConfirmationScreen() = CheckoutConfirmationContent()
-```
-
-The transition type can be a regular class or an `object`. It must implement `ModalTransitions`.
 
 ### Navigation controller
 
@@ -283,9 +274,9 @@ Nested graphs use the same pattern: create a child controller with its own initi
 
 ### Navigation transitions
 
-Scene and modal animations are configured together through `NavigationTransitions`. Regular scene
-transitions control screen and pane changes; modal transitions control the overlay content and its
-scrim.
+Regular scene animations are configured through `NavigationTransitions`. Modal animations belong
+to each modal component because different components can use different scrims, transitions, and
+dismissal rules.
 
 ```kotlin
 Navigation(
@@ -294,14 +285,9 @@ Navigation(
     directionRegistries = registries,
     transitions = NavigationTransitions(
         regular = DefaultRegularSceneTransitions(),
-        modal = DefaultModalTransitions(),
     )
 )
 ```
-
-The two animation channels are intentionally grouped in one configuration because Navigation 3
-renders regular scenes and `OverlayScene` modals through different internal mechanisms. Consumers
-only need to configure one navigation policy.
 
 ## Code generation
 
