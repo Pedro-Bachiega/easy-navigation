@@ -1,5 +1,6 @@
 package com.pedrobneto.easy.navigation.plugin
 
+import com.android.build.gradle.tasks.ExtractAnnotations
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
@@ -43,6 +44,13 @@ class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
             dependsOn(generate)
         }
 
+        listOf("com.android.kotlin.multiplatform.library", "com.android.library", "com.android.application").forEach { id ->
+            pluginManager.withPlugin(id) {
+                // AGP's static Kotlin source view drops producer dependencies (KT-59503).
+                tasks.withType(ExtractAnnotations::class.java).configureEach { dependsOn(generate) }
+            }
+        }
+
         var kotlinConfigured = false
         listOf("org.jetbrains.kotlin.multiplatform", "org.jetbrains.kotlin.jvm", "org.jetbrains.kotlin.android").forEach { id ->
             pluginManager.withPlugin(id) {
@@ -61,13 +69,14 @@ class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
                         else -> error("Easy Navigation requires a Kotlin project.")
                     }
                     val compilations = compilationTrees.keys.toList()
-                    val sourceSets = extension.sourceSets.toList()
+                    val graph = extension.sourceSets.associate { sourceSet -> sourceSet.name to sourceSet.dependsOn.map { it.name }.sorted() }
+                    fun ancestors(name: String): Set<String> = setOf(name) + graph[name].orEmpty().flatMap { ancestors(it) }
+                    val activeSets = compilations.flatMap { ancestors(it.defaultSourceSet.name) }.toSet()
+                    val sourceSets = extension.sourceSets.filter { it.name in activeSets }
                     val output = layout.buildDirectory.dir("generated/easyNavigation/kotlin").get().asFile
                     val originalDirectories = sourceSets.associate { sourceSet ->
                         sourceSet.name to sourceSet.kotlin.srcDirs.filterNot { it.toPath().startsWith(output.toPath()) }
                     }
-                    val graph = sourceSets.associate { sourceSet -> sourceSet.name to sourceSet.dependsOn.map { it.name }.sorted() }
-                    fun ancestors(name: String): Set<String> = setOf(name) + graph[name].orEmpty().flatMap { ancestors(it) }
                     val mainSets = compilations.filter { compilationTrees[it] == "main" }.flatMap { ancestors(it.defaultSourceSet.name) }.toSet()
                     val trees = compilations.groupBy { compilationTrees.getValue(it) }.map { (name, members) ->
                         val leaves = members.map { it.defaultSourceSet.name }.distinct().sorted()

@@ -19,6 +19,7 @@ kotlin { jvmToolchain(21) }
 dependencies {
     compileOnly(gradleApi())
     implementation(libs.plugin.jetbrains.kotlin.plugin)
+    compileOnly(libs.plugin.androidx.plugin)
 }
 
 sourceSets {
