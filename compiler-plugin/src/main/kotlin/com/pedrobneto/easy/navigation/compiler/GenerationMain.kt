@@ -17,7 +17,7 @@ object GenerationMain {
             val parts = it.split(':', limit = 3)
             GenerationTree(parts[0], parts[1].ifEmpty { null }, parts[2].split(',').filter(String::isNotEmpty))
         }
-        generate(output, module, parents, sources, trees)
+        generate(output, module, parents, sources, trees, options["--dependency"].orEmpty().map(::File))
     }
 }
 
@@ -29,9 +29,10 @@ internal fun generate(
     parents: Map<String, List<String>>,
     sources: Map<String, List<File>>,
     trees: List<GenerationTree>,
+    dependencies: List<File> = emptyList(),
 ) {
     val graph = SourceGraph(parents, trees.flatMap { it.leaves }, null)
-    val destinations = SourceReader().read(sources, graph)
+    val destinations = SourceReader(DependencySymbols(dependencies)).read(sources, graph)
     val staging = File(output.parentFile, "${output.name}.staging")
     staging.deleteRecursively()
     staging.mkdirs()

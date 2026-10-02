@@ -9,7 +9,8 @@ import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
 
 /** Syntax discovery deliberately precedes FIR: consumers can already import not-yet-generated registries. */
-internal class SourceReader {
+@OptIn(org.jetbrains.kotlin.CoreEnvironmentDeprecation::class, CompilerConfiguration.Internals::class)
+internal class SourceReader(private val dependencies: DependencySymbols = DependencySymbols(emptyList())) {
     fun read(sources: Map<String, List<File>>, graph: SourceGraph): List<Destination> {
         val disposable = Disposer.newDisposable()
         try {
@@ -24,7 +25,7 @@ internal class SourceReader {
             }
             return files.flatMap { source ->
                 val visible = graph.ancestors(source.sourceSet)
-                val resolver = Names(source.file, files.filter { it.sourceSet in visible }.map { it.file })
+                val resolver = Names(source.file, files.filter { it.sourceSet in visible }.map { it.file }, dependencies)
                 source.file.declarations.filterIsInstance<KtNamedFunction>().mapNotNull { function ->
                     val annotations = function.annotationEntries.map { resolver.annotation(it) }
                     if (annotations.none { it.name in DESTINATION_ANNOTATIONS }) return@mapNotNull null
@@ -92,12 +93,12 @@ internal const val MODAL = "$CORE.modal.Modal"
 internal val DESTINATION_ANNOTATIONS = setOf(ROUTE, DEEPLINK, PARENT_ROUTE, PARENT_DEEPLINK)
 private val KNOWN_ANNOTATIONS = DESTINATION_ANNOTATIONS + setOf(COMPOSABLE, SCOPE, GLOBAL, ADAPTIVE, SINGLE, EXTRA, MODAL)
 
-private class Names(private val file: KtFile, private val visible: List<KtFile>) {
+private class Names(private val file: KtFile, private val visible: List<KtFile>, private val dependencies: DependencySymbols) {
     private val imports = file.importDirectives.filterNot { it.isAllUnder }.associate {
         (it.aliasName ?: it.importedFqName?.shortName()?.asString().orEmpty()) to it.importedFqName?.asString().orEmpty()
     }
     private val stars = file.importDirectives.filter { it.isAllUnder }.mapNotNull { it.importedFqName?.asString() }
-    private val classes = mutableMapOf<String, Pair<String, String>>()
+    private val classes = dependencies.classes.toMutableMap()
     private val aliases = mutableMapOf<String, Pair<KtFile, String>>()
     private val constants = mutableMapOf<String, Pair<KtFile, KtExpression>>()
 
@@ -125,8 +126,8 @@ private class Names(private val file: KtFile, private val visible: List<KtFile>)
         val head = cleaned.substringBefore('.')
         imports[head]?.let { return it + cleaned.removePrefix(head) }
         val local = listOf(file.packageFqName.asString(), cleaned).filter(String::isNotEmpty).joinToString(".")
-        if (local in classes || local in aliases || local in constants) return local
-        val candidates = stars.map { "$it.$cleaned" }.filter { it in classes || it in aliases || it in constants || it in KNOWN_ANNOTATIONS }
+        if (local in classes || local in aliases || local in constants || local in dependencies.constants || local in dependencies.aliases) return local
+        val candidates = stars.map { "$it.$cleaned" }.filter { it in classes || it in aliases || it in constants || it in dependencies.constants || it in dependencies.aliases || it in KNOWN_ANNOTATIONS }
         require(candidates.size <= 1) { "Ambiguous name '$text' in ${file.name}; use an explicit import." }
         candidates.singleOrNull()?.let { return it }
         if ('.' in cleaned && head.firstOrNull()?.isLowerCase() == true) return cleaned
@@ -137,9 +138,10 @@ private class Names(private val file: KtFile, private val visible: List<KtFile>)
 
     fun type(text: String): String {
         val name = resolve(text)
+        dependencies.aliases[name]?.let { return it }
         val alias = aliases[name] ?: return name
         // Alias bodies use their own imports, not the caller's imports.
-        return Names(alias.first, visible).type(alias.second)
+        return Names(alias.first, visible, dependencies).type(alias.second)
     }
 
     fun className(name: String): String = classes[name]?.second ?: name.substringAfterLast('.')
@@ -170,8 +172,9 @@ private class Names(private val file: KtFile, private val visible: List<KtFile>)
             else -> {
                 val name = resolve(expression.text)
                 require(name !in seen) { "Cyclic annotation constant: $name" }
+                dependencies.constants[name]?.let { return it }
                 val constant = constants[name] ?: error("Cannot read annotation constant '$name'; use a source constant or literal.")
-                Names(constant.first, visible).value(constant.second, seen + name)
+                Names(constant.first, visible, dependencies).value(constant.second, seen + name)
             }
         }
     }

@@ -46,6 +46,9 @@ jobs:
       - name: Compile generated common and JVM consumer APIs
         run: ./gradlew :sample:app:compileCommonMainKotlinMetadata :sample:app:compileKotlinJvm :integration:consumer:compileCommonMainKotlinMetadata :integration:consumer:compileKotlinJvm :integration:feature:jvmTest --no-daemon
 
+      - name: Validate FIR errors and incremental consumer compilation
+        run: bash .github/scripts/verify-compiler-consumer.sh
+
       - name: Run checks
         run: ./gradlew check --no-daemon
 

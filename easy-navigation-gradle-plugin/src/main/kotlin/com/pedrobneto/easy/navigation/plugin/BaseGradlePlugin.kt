@@ -74,6 +74,10 @@ class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
                 "$name:${root.orEmpty()}:${leaves.joinToString(",")}"
             }
             generate.configure {
+                dependencyClasspath.from(targets.flatMap { it.compilations.toList() }.filter {
+                    (it.name == "main" && it.target.platformType in setOf(KotlinPlatformType.jvm, KotlinPlatformType.androidJvm)) ||
+                        (it.target.platformType == KotlinPlatformType.common && it.defaultSourceSet.name in mainSets && it.defaultSourceSet.dependsOn.isEmpty())
+                }.map { it.compileDependencyFiles })
                 sourceParents.set(graph)
                 sourceRoots.set(originalDirectories.mapValues { (_, dirs) -> dirs.map { it.relativeTo(projectDir).invariantSeparatorsPath }.sorted() })
                 this.trees.set(trees)

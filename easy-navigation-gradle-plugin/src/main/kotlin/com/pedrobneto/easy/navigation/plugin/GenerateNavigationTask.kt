@@ -14,6 +14,7 @@ import org.gradle.process.ExecOperations
 @CacheableTask
 abstract class GenerateNavigationTask @Inject constructor(private val exec: ExecOperations) : DefaultTask() {
     @get:Classpath abstract val generatorClasspath: ConfigurableFileCollection
+    @get:Classpath abstract val dependencyClasspath: ConfigurableFileCollection
     @get:InputFiles @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val sourceFiles: ConfigurableFileCollection
     @get:Input abstract val sourceRoots: MapProperty<String, List<String>>
@@ -31,6 +32,7 @@ abstract class GenerateNavigationTask @Inject constructor(private val exec: Exec
         sourceParents.get().toSortedMap().forEach { (name, parents) ->
             arguments.addAll(listOf("--source-set", "$name=${parents.sorted().joinToString(",")}"))
         }
+        dependencyClasspath.files.sortedBy { it.path }.forEach { arguments.addAll(listOf("--dependency", it.path)) }
         trees.get().sorted().forEach { arguments.addAll(listOf("--tree", it)) }
         sourceRoots.get().toSortedMap().forEach { (name, roots) ->
             val directories = roots.map { base.resolve(it).canonicalFile.toPath() }
