@@ -9,7 +9,10 @@ validation. Retain the Gradle plugin ID, annotations, direction names/packages a
 registry API. Applications continue composing feature registries explicitly with `listOf(...)`.
 The compiler artifact and generation dependencies are selected automatically by the Gradle plugin.
 
-The Gradle plugin reads the finalized KGP source-set graph and configured source directories.
+The Gradle plugin reads the KGP source-set graph after `AfterFinaliseRefinesEdges`, when default
+hierarchy edges have been created, and uses KGP source-set-tree classifiers for compilations.
+The lifecycle/classifier bridge uses internal KGP APIs isolated behind the exact version pin.
+It reads configured source directories independently of directory names.
 A cacheable task runs compiler PSI discovery in a separate JVM, reads dependency metadata for
 class names, type aliases and constants, and emits a complete source snapshot. Successful
 regeneration replaces the snapshot, removing obsolete declarations. Discovery precedes normal

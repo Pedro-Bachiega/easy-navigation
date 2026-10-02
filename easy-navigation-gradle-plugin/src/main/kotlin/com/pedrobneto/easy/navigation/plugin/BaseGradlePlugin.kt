@@ -43,49 +43,60 @@ class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
             dependsOn(generate)
         }
 
-        // Inspect the finalized KGP graph, never file-path or task-name heuristics. Consumers may
-        // configure custom source directories and dependsOn edges after applying this plugin.
-        afterEvaluate {
-            check(getKotlinPluginVersion() == SUPPORTED_KOTLIN) {
-                "Easy Navigation supports Kotlin $SUPPORTED_KOTLIN; found ${getKotlinPluginVersion()}. Align Kotlin, Compose Compiler and Serialization plugin versions."
-            }
-            val extension = kotlinExtension
-            val targets = when (extension) {
-                is KotlinMultiplatformExtension -> extension.targets.toList()
-                is KotlinSingleTargetExtension<*> -> listOf(extension.target)
-                else -> error("Easy Navigation requires a Kotlin project.")
-            }
-            val compilations = targets.filter { it.platformType != KotlinPlatformType.common }
-                .flatMap { it.compilations.toList() }
-            val sourceSets = extension.sourceSets.toList()
-            val output = layout.buildDirectory.dir("generated/easyNavigation/kotlin").get().asFile
-            val originalDirectories = sourceSets.associate { sourceSet ->
-                sourceSet.name to sourceSet.kotlin.srcDirs.filterNot { it.toPath().startsWith(output.toPath()) }
-            }
-            val graph = sourceSets.associate { sourceSet -> sourceSet.name to sourceSet.dependsOn.map { it.name }.sorted() }
-            fun ancestors(name: String): Set<String> = setOf(name) + graph[name].orEmpty().flatMap { ancestors(it) }
-            val mainSets = compilations.filter { it.name == "main" }.flatMap { ancestors(it.defaultSourceSet.name) }.toSet()
-            val trees = compilations.groupBy { if (it.name == "main") "main" else "test" }.map { (name, members) ->
-                val leaves = members.map { it.defaultSourceSet.name }.distinct().sorted()
-                val shared = leaves.map(::ancestors).reduce { a, b -> a intersect b }.let {
-                    if (name == "main") it else it - mainSets
+        var kotlinConfigured = false
+        listOf("org.jetbrains.kotlin.multiplatform", "org.jetbrains.kotlin.jvm", "org.jetbrains.kotlin.android").forEach { id ->
+            pluginManager.withPlugin(id) {
+                if (kotlinConfigured) return@withPlugin
+                kotlinConfigured = true
+                check(getKotlinPluginVersion() == SUPPORTED_KOTLIN) {
+                    "Easy Navigation supports Kotlin $SUPPORTED_KOTLIN; found ${getKotlinPluginVersion()}. Align Kotlin, Compose Compiler and Serialization plugin versions."
                 }
-                val root = shared.filter { candidate -> graph[candidate].orEmpty().none { it in shared } }.singleOrNull()
-                "$name:${root.orEmpty()}:${leaves.joinToString(",")}"
+                // Default hierarchy edges are created after ordinary afterEvaluate callbacks.
+                // Read the KGP graph only after refines edges have been finalized.
+                withFinalizedNavigationGraph { compilationTrees ->
+                    val extension = kotlinExtension
+                    val targets = when (extension) {
+                        is KotlinMultiplatformExtension -> extension.targets.toList()
+                        is KotlinSingleTargetExtension<*> -> listOf(extension.target)
+                        else -> error("Easy Navigation requires a Kotlin project.")
+                    }
+                    val compilations = compilationTrees.keys.toList()
+                    val sourceSets = extension.sourceSets.toList()
+                    val output = layout.buildDirectory.dir("generated/easyNavigation/kotlin").get().asFile
+                    val originalDirectories = sourceSets.associate { sourceSet ->
+                        sourceSet.name to sourceSet.kotlin.srcDirs.filterNot { it.toPath().startsWith(output.toPath()) }
+                    }
+                    val graph = sourceSets.associate { sourceSet -> sourceSet.name to sourceSet.dependsOn.map { it.name }.sorted() }
+                    fun ancestors(name: String): Set<String> = setOf(name) + graph[name].orEmpty().flatMap { ancestors(it) }
+                    val mainSets = compilations.filter { compilationTrees[it] == "main" }.flatMap { ancestors(it.defaultSourceSet.name) }.toSet()
+                    val trees = compilations.groupBy { compilationTrees.getValue(it) }.map { (name, members) ->
+                        val leaves = members.map { it.defaultSourceSet.name }.distinct().sorted()
+                        val shared = leaves.map(::ancestors).reduce { a, b -> a intersect b }.let {
+                            if (name == "main") it else it - mainSets
+                        }
+                        val root = if (extension is KotlinMultiplatformExtension) {
+                            shared.filter { candidate -> graph[candidate].orEmpty().none { it in shared } }.singleOrNull()
+                        } else null
+                        "$name:${root.orEmpty()}:${leaves.joinToString(",")}"
+                    }
+                    generate.configure {
+                        dependencyClasspath.from(targets.flatMap { it.compilations.toList() }.filter {
+                            (compilationTrees[it] == "main" && it.target.platformType in setOf(KotlinPlatformType.jvm, KotlinPlatformType.androidJvm)) ||
+                                (it.target.platformType == KotlinPlatformType.common && it.defaultSourceSet.name in mainSets && it.defaultSourceSet.dependsOn.isEmpty())
+                        }.map { it.compileDependencyFiles })
+                        sourceParents.set(graph)
+                        sourceRoots.set(originalDirectories.mapValues { (_, dirs) -> dirs.map { it.relativeTo(projectDir).invariantSeparatorsPath }.sorted() })
+                        this.trees.set(trees)
+                        sourceFiles.from(originalDirectories.values.flatten().map { fileTree(it) { include("**/*.kt") } })
+                    }
+                    sourceSets.forEach { sourceSet ->
+                        sourceSet.kotlin.srcDir(generate.flatMap { it.outputDirectory.dir(sourceSet.name) })
+                    }
+                }
             }
-            generate.configure {
-                dependencyClasspath.from(targets.flatMap { it.compilations.toList() }.filter {
-                    (it.name == "main" && it.target.platformType in setOf(KotlinPlatformType.jvm, KotlinPlatformType.androidJvm)) ||
-                        (it.target.platformType == KotlinPlatformType.common && it.defaultSourceSet.name in mainSets && it.defaultSourceSet.dependsOn.isEmpty())
-                }.map { it.compileDependencyFiles })
-                sourceParents.set(graph)
-                sourceRoots.set(originalDirectories.mapValues { (_, dirs) -> dirs.map { it.relativeTo(projectDir).invariantSeparatorsPath }.sorted() })
-                this.trees.set(trees)
-                sourceFiles.from(originalDirectories.values.flatten().map { fileTree(it) { include("**/*.kt") } })
-            }
-            sourceSets.forEach { sourceSet ->
-                sourceSet.kotlin.srcDir(generate.flatMap { it.outputDirectory.dir(sourceSet.name) })
-            }
+        }
+        afterEvaluate {
+            check(kotlinConfigured) { "Easy Navigation requires a Kotlin JVM, Android or Multiplatform plugin." }
         }
     }
 

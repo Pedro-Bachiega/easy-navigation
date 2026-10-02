@@ -69,6 +69,7 @@ internal fun generate(
         // Only replace successful generation. Removed annotations also remove obsolete files.
         output.deleteRecursively()
         check(staging.renameTo(output)) { "Cannot install generated sources at $output" }
+        println("Easy Navigation: generated ${output.walkTopDown().count { it.extension == "kt" }} Kotlin files for '$module'.")
     } finally {
         staging.deleteRecursively()
     }

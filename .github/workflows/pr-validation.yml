@@ -60,6 +60,13 @@ jobs:
       - name: Run checks
         run: ./gradlew check --no-daemon
 
+      - name: Upload published consumer generated sources
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-consumer-generated-sources
+          path: integration/published-consumer/build/generated/easyNavigation/kotlin
+
   native:
     name: Compile iOS consumers
     runs-on: macos-15
