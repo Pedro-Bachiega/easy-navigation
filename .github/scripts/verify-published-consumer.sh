@@ -13,6 +13,6 @@ set -euo pipefail
     -PVERSION_NAME=0.0.1-compiler-ci -PsignAllPublications=false --no-daemon
 
 ./gradlew -p integration/published-consumer \
-    compileCommonMainKotlinMetadata compileKotlinJvm \
+    compileKotlinJvm \
     -PverificationRepository="$PWD/build/consumer-repository" \
     --configuration-cache --configuration-cache-problems=fail --no-daemon

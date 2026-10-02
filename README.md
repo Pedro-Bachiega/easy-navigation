@@ -249,6 +249,9 @@ combine the public registries of their feature modules explicitly.
 Android, JVM, iOS ARM64, and iOS Simulator ARM64 are the supported initial targets. Other Kotlin
 versions and backends are outside the initial compatibility guarantee.
 
+See the [compiler architecture decision](docs/adr/0002-kotlin-compiler-navigation.md) for the
+compilation pipeline, compatibility risks and acceptance gates.
+
 ## Minimal app setup
 
 ```kotlin
