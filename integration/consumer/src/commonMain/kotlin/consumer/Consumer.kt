@@ -1,6 +1,7 @@
 package consumer
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.pedrobneto.easy.navigation.core.Navigation
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.registry.AccountDirectionRegistry
@@ -12,5 +13,5 @@ val registries: List<DirectionRegistry> = listOf(FeatureDirectionRegistry, Accou
 
 @Composable
 fun ConsumerNavigation() {
-    Navigation(initialRoute = Home, directionRegistries = registries)
+    Navigation(modifier = Modifier, initialRoute = Home, directionRegistries = registries)
 }
