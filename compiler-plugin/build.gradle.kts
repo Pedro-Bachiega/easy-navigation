@@ -25,7 +25,8 @@ dependencies {
     compileOnly(libs.jetbrains.kotlin.compiler)
     implementation(libs.kotlinpoet)
     testImplementation(libs.jetbrains.kotlin.compiler)
-    testImplementation(kotlin("test"))
+    testImplementation(kotlin("test-junit5"))
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.13.4")
 }
 
 tasks.test { useJUnitPlatform() }

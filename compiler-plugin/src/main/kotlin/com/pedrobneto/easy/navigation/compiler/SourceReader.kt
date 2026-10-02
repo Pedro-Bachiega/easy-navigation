@@ -92,7 +92,7 @@ internal const val MODAL = "$CORE.modal.Modal"
 internal val DESTINATION_ANNOTATIONS = setOf(ROUTE, DEEPLINK, PARENT_ROUTE, PARENT_DEEPLINK)
 private val KNOWN_ANNOTATIONS = DESTINATION_ANNOTATIONS + setOf(COMPOSABLE, SCOPE, GLOBAL, ADAPTIVE, SINGLE, EXTRA, MODAL)
 
-private class Names(private val file: KtFile, visible: List<KtFile>) {
+private class Names(private val file: KtFile, private val visible: List<KtFile>) {
     private val imports = file.importDirectives.filterNot { it.isAllUnder }.associate {
         (it.aliasName ?: it.importedFqName?.shortName()?.asString().orEmpty()) to it.importedFqName?.asString().orEmpty()
     }
@@ -139,13 +139,13 @@ private class Names(private val file: KtFile, visible: List<KtFile>) {
         val name = resolve(text)
         val alias = aliases[name] ?: return name
         // Alias bodies use their own imports, not the caller's imports.
-        return Names(alias.first, listOf(alias.first)).type(alias.second)
+        return Names(alias.first, visible).type(alias.second)
     }
 
     fun className(name: String): String = classes[name]?.second ?: name.substringAfterLast('.')
     fun packageName(name: String): String = classes[name]?.first ?: name.split('.').takeWhile { it.firstOrNull()?.isLowerCase() == true }.joinToString(".")
 
-    fun annotation(entry: KtAnnotationEntry): Annotation = Annotation(resolve(entry.typeReference!!.text), entry, this)
+    fun annotation(entry: KtAnnotationEntry): Annotation = Annotation(type(entry.typeReference!!.text), entry, this)
 
     fun value(expression: KtExpression, seen: Set<String> = emptySet()): Any {
         return when (expression) {
@@ -171,7 +171,7 @@ private class Names(private val file: KtFile, visible: List<KtFile>) {
                 val name = resolve(expression.text)
                 require(name !in seen) { "Cyclic annotation constant: $name" }
                 val constant = constants[name] ?: error("Cannot read annotation constant '$name'; use a source constant or literal.")
-                Names(constant.first, listOf(constant.first)).value(constant.second, seen + name)
+                Names(constant.first, visible).value(constant.second, seen + name)
             }
         }
     }

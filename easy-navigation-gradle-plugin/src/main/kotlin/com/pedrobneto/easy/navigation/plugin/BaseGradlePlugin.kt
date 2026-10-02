@@ -88,7 +88,6 @@ class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
     override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean = true
     override fun getCompilerPluginId(): String = "io.github.pedro-bachiega.easy-navigation"
     override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(GROUP, ARTIFACT, PLUGIN_VERSION)
-    override fun getPluginArtifactForNative(): SubpluginArtifact = getPluginArtifact()
 
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project

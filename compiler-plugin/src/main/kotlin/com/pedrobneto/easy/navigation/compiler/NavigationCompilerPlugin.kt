@@ -86,6 +86,8 @@ private class DestinationChecker(private val messages: MessageCollector) : FirNa
         if (routeSymbol.fir.annotations.none { it.toAnnotationClassId(session) == serializable }) {
             error("@Route value ${routeSymbol.classId.asSingleFqName()} must be @Serializable.")
         }
+        if (declaration.isLocal || declaration.dispatchReceiverType != null) error("destination ${declaration.name} must be top-level.")
+        if (declaration.receiverParameter != null || declaration.typeParameters.isNotEmpty()) error("destination ${declaration.name} cannot require a receiver or type arguments.")
         if (declaration.contextParameters.isNotEmpty()) error("destination ${declaration.name} cannot require context parameters.")
         val matching = declaration.valueParameters.filter {
             (it.returnTypeRef.coneType.fullyExpandedType(session) as? ConeClassLikeType)?.lookupTag?.classId == routeSymbol.classId
