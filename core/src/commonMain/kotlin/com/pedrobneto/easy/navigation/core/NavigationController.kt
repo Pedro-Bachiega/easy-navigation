@@ -46,7 +46,13 @@ internal val LocalParentNavigationController: ProvidableCompositionLocal<Navigat
 
 /**
  * Remembers a controller initialized from a route.
- * Initial arguments only apply to a new stack; saved state takes precedence.
+ * Initial arguments only apply when creating a new stack. Restored state takes precedence,
+ * and changes to initial arguments during recomposition do not reset or navigate the stack.
+ *
+ * @param initialRoute The initial [NavigationRoute] placed on a new back stack.
+ * @param directionRegistries The registries that provide navigation destinations and route serializers.
+ * @param json The JSON configuration used to resolve deeplink arguments and serialize navigation payloads and results. The controller retains this instance for later navigation.
+ * @return The remembered [NavigationController] for the navigation back stack.
  */
 @Composable
 @KoverExcludes
@@ -65,7 +71,13 @@ fun rememberNavigationController(
 
 /**
  * Remembers a controller initialized from a deeplink.
- * Initial arguments only apply to a new stack; saved state takes precedence.
+ * Initial arguments only apply when creating a new stack. Restored state takes precedence,
+ * and changes to initial arguments during recomposition do not reset or navigate the stack.
+ *
+ * @param initialRoute The initial deeplink resolved against directionRegistries for a new back stack. Resolution errors propagate to the caller.
+ * @param directionRegistries The registries that provide navigation destinations and route serializers.
+ * @param json The JSON configuration used to resolve deeplink arguments and serialize navigation payloads and results. The controller retains this instance for later navigation.
+ * @return The remembered [NavigationController] for the navigation back stack.
  */
 @Composable
 @KoverExcludes
@@ -85,7 +97,14 @@ fun rememberNavigationController(
 
 /**
  * Remembers a controller initialized from a deeplink and serializable payload.
- * Initial arguments only apply to a new stack; saved state takes precedence.
+ * Initial arguments only apply when creating a new stack. Restored state takes precedence,
+ * and changes to initial arguments during recomposition do not reset or navigate the stack.
+ *
+ * @param initialRoute The initial deeplink resolved against directionRegistries for a new back stack. Resolution errors propagate to the caller.
+ * @param payload The serializable payload for the initial deeplink. It must encode to a JSON object; its arguments override query and path arguments.
+ * @param directionRegistries The registries that provide navigation destinations and route serializers.
+ * @param json The JSON configuration used to resolve deeplink arguments and serialize navigation payloads and results. The controller retains this instance for later navigation.
+ * @return The remembered [NavigationController] for the navigation back stack.
  */
 @Composable
 @KoverExcludes
@@ -108,6 +127,11 @@ inline fun <reified T> rememberNavigationController(
 /**
  * Remembers a controller for an existing back stack without requiring an initial route.
  * The caller owns the stack's saving and restoration.
+ *
+ * @param backStack The existing navigation back stack used directly by the controller. The caller manages its saving and restoration.
+ * @param directionRegistries The registries that provide navigation destinations and route serializers.
+ * @param json The JSON configuration used to resolve deeplink arguments and serialize navigation payloads and results. The controller retains this instance for later navigation.
+ * @return The remembered [NavigationController] for the navigation back stack.
  */
 @Composable
 @KoverExcludes
