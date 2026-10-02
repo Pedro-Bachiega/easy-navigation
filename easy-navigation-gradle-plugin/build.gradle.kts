@@ -18,7 +18,6 @@ kotlin { jvmToolchain(21) }
 
 dependencies {
     compileOnly(gradleApi())
-    implementation(libs.toolkit.arch.lumber)
     implementation(libs.plugin.jetbrains.kotlin.plugin)
 }
 
@@ -38,6 +37,10 @@ tasks.processResources {
 }
 
 publishing {
+    repositories.maven {
+        name = "Consumer"
+        url = repositoryRoot.resolve("build/consumer-repository").toURI()
+    }
     publications.withType<MavenPublication>().configureEach {
         if (name == "pluginMaven") {
             artifactId = "easy-navigation-library"

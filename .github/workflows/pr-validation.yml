@@ -49,6 +49,9 @@ jobs:
       - name: Validate FIR errors and incremental consumer compilation
         run: bash .github/scripts/verify-compiler-consumer.sh
 
+      - name: Compile a consumer from published artifacts
+        run: bash .github/scripts/verify-published-consumer.sh
+
       - name: Run checks
         run: ./gradlew check --no-daemon
 
