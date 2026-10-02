@@ -2,7 +2,6 @@ plugins {
     id("jacoco")
 
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.google.ksp) apply false
     alias(libs.plugins.jetbrains.compose.compiler) apply false
     alias(libs.plugins.jetbrains.compose.kotlin) apply false
     alias(libs.plugins.jetbrains.serialization) apply false
@@ -16,8 +15,8 @@ plugins {
 subprojects {
     configurations.configureEach {
         resolutionStrategy.dependencySubstitution {
-            substitute(module("io.github.pedro-bachiega:easy-navigation-library-processor"))
-                .using(project(":processor"))
+            substitute(module("io.github.pedro-bachiega:easy-navigation-compiler-plugin"))
+                .using(project(":compiler-plugin"))
         }
     }
 }

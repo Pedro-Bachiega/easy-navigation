@@ -5,7 +5,6 @@ import com.pedrobneto.easy.navigation.buildlogic.setupOptIns
 import com.pedrobneto.easy.navigation.buildlogic.util.Config
 import com.pedrobneto.easy.navigation.buildlogic.util.Target
 import com.pedrobneto.easy.navigation.buildlogic.util.applyPlugins
-import com.pedrobneto.easy.navigation.buildlogic.util.getPluginId
 import com.pedrobneto.easy.navigation.buildlogic.util.kotlinMultiplatform
 import com.pedrobneto.easy.navigation.buildlogic.util.libs
 import com.pedrobneto.easy.navigation.buildlogic.util.projectJavaTarget
@@ -31,15 +30,6 @@ internal class LibraryPlugin : Plugin<Project> {
 
         kotlinExtension.jvmToolchain(projectJavaVersionCode)
         target.setupTargets(kotlinMultiplatform ?: return@with)
-        plugins.withId(libs.getPluginId("google-ksp")) {
-            tasks.matching { it.name == "extractAndroidMainAnnotations" }.configureEach {
-                dependsOn(
-                    tasks.matching { task ->
-                        task.name == "kspCommonMainKotlinMetadata" || task.name == "kspAndroidMain"
-                    }
-                )
-            }
-        }
 
         plugins.apply("plugin-lint")
         plugins.apply("plugin-optimize")

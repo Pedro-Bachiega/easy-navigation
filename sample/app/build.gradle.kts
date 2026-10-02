@@ -1,7 +1,6 @@
 plugins {
     id("plugin-multiplatform-library")
     id("plugin-compose")
-    alias(libs.plugins.google.ksp)
     alias(libs.plugins.jetbrains.serialization)
     alias(libs.plugins.easy.navigation.library)
 }

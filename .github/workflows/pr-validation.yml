@@ -40,5 +40,30 @@ jobs:
       - name: Validate configuration cache
         run: ./gradlew help --configuration-cache --no-daemon
 
+      - name: Test compiler generation
+        run: ./gradlew :compiler-plugin:test --no-daemon
+
+      - name: Compile generated common and JVM consumer APIs
+        run: ./gradlew :sample:app:compileCommonMainKotlinMetadata :sample:app:compileKotlinJvm --no-daemon
+
       - name: Run checks
         run: ./gradlew check --no-daemon
+
+  native:
+    name: Compile iOS consumers
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Compile and link both iOS frameworks
+        run: ./gradlew :sample:app:linkDebugFrameworkIosArm64 :sample:app:linkDebugFrameworkIosSimulatorArm64 --no-daemon
+      - name: Upload generated source declarations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navigation-ios-generated-sources
+          path: sample/app/build/generated/easyNavigation/kotlin

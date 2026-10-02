@@ -62,7 +62,7 @@ jobs:
         run: ./gradlew check --no-daemon
 
       - name: Publish Maven Central artifacts
-        run: ./gradlew :core:publishAndReleaseToMavenCentral :processor:publishAndReleaseToMavenCentral :test:publishAndReleaseToMavenCentral --no-daemon
+        run: ./gradlew :core:publishAndReleaseToMavenCentral :compiler-plugin:publishAndReleaseToMavenCentral :test:publishAndReleaseToMavenCentral --no-daemon
 
       - name: Publish Gradle Plugin Portal artifact
         run: ./gradlew :easy-navigation-gradle-plugin:publishPlugins --no-daemon
