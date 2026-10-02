@@ -1,6 +1,8 @@
 package com.pedrobneto.easy.navigation.compiler
 
 import java.io.File
+import org.jetbrains.kotlin.cli.create
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
@@ -9,13 +11,13 @@ import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
 
 /** Syntax discovery deliberately precedes FIR: consumers can already import not-yet-generated registries. */
-@OptIn(org.jetbrains.kotlin.CoreEnvironmentDeprecation::class, CompilerConfiguration.Internals::class)
+@OptIn(org.jetbrains.kotlin.CoreEnvironmentDeprecation::class)
 internal class SourceReader(private val dependencies: DependencySymbols = DependencySymbols(emptyList())) {
     fun read(sources: Map<String, List<File>>, graph: SourceGraph): List<Destination> {
         val disposable = Disposer.newDisposable()
         try {
             val environment = KotlinCoreEnvironment.createForProduction(
-                disposable, CompilerConfiguration(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+                disposable, CompilerConfiguration.create(messageCollector = MessageCollector.NONE), EnvironmentConfigFiles.JVM_CONFIG_FILES,
             )
             val factory = KtPsiFactory(environment.project, false)
             val files = sources.flatMap { (sourceSet, paths) ->
@@ -41,7 +43,7 @@ internal class SourceReader(private val dependencies: DependencySymbols = Depend
                     requireValid(!function.hasModifier(KtTokens.SUSPEND_KEYWORD), "destination must not be suspend.")
                     requireValid(function.receiverTypeReference == null && function.typeParameters.isEmpty(), "destination must not require a receiver or type arguments.")
                     val routeParameters = function.valueParameters.filter {
-                        resolver.type(it.typeReference?.text.orEmpty().removeSuffix("?")) == route
+                        !it.isVarArg && resolver.type(it.typeReference?.typeElement?.text.orEmpty().removeSuffix("?")) == route
                     }
                     requireValid(routeParameters.size <= 1, "destination has multiple route parameters.")
                     function.valueParameters.filter { it !in routeParameters }.forEach {
@@ -147,6 +149,44 @@ private class Names(private val file: KtFile, private val visible: List<KtFile>,
     fun className(name: String): String = classes[name]?.second ?: name.substringAfterLast('.')
     fun packageName(name: String): String = classes[name]?.first ?: name.split('.').takeWhile { it.firstOrNull()?.isLowerCase() == true }.joinToString(".")
 
+    private fun literal(text: String): Any {
+        val value = text.replace("_", "")
+        if (value == "true" || value == "false") return value.toBoolean()
+        if (!value.startsWith("0x", true) && !value.startsWith("0b", true) && value.endsWith("f", true)) return value.dropLast(1).toFloat()
+        if (!value.startsWith("0x", true) && !value.startsWith("0b", true) && ('.' in value || 'e' in value.lowercase())) return value.toDouble()
+        val number = value.removeSuffix("L").removeSuffix("l").let {
+            when {
+                it.startsWith("0x", true) -> it.drop(2).toLong(16)
+                it.startsWith("0b", true) -> it.drop(2).toLong(2)
+                else -> it.toLong()
+            }
+        }
+        return if (value.endsWith("L", true) || number !in Int.MIN_VALUE..Int.MAX_VALUE) number else number.toInt()
+    }
+
+    private fun arithmetic(left: Number, right: Number, operation: org.jetbrains.kotlin.com.intellij.psi.tree.IElementType): Number {
+        if (left is Double || right is Double || left is Float || right is Float) {
+            val result = when (operation) {
+                KtTokens.PLUS -> left.toDouble() + right.toDouble()
+                KtTokens.MINUS -> left.toDouble() - right.toDouble()
+                KtTokens.MUL -> left.toDouble() * right.toDouble()
+                KtTokens.DIV -> left.toDouble() / right.toDouble()
+                KtTokens.PERC -> left.toDouble() % right.toDouble()
+                else -> error("Unsupported numeric annotation operation: $operation")
+            }
+            return if (left is Double || right is Double) result else result.toFloat()
+        }
+        val result = when (operation) {
+            KtTokens.PLUS -> left.toLong() + right.toLong()
+            KtTokens.MINUS -> left.toLong() - right.toLong()
+            KtTokens.MUL -> left.toLong() * right.toLong()
+            KtTokens.DIV -> left.toLong() / right.toLong()
+            KtTokens.PERC -> left.toLong() % right.toLong()
+            else -> error("Unsupported numeric annotation operation: $operation")
+        }
+        return if (left is Long || right is Long) result else result.toInt()
+    }
+
     fun annotation(entry: KtAnnotationEntry): Annotation = Annotation(type(entry.typeReference!!.text), entry, this)
 
     fun value(expression: KtExpression, seen: Set<String> = emptySet()): Any {
@@ -159,15 +199,22 @@ private class Names(private val file: KtFile, private val visible: List<KtFile>,
                     else -> error("Unsupported string annotation expression: ${expression.text}")
                 }
             }
-            is KtConstantExpression -> expression.text.removeSuffix("f").removeSuffix("F").toFloatOrNull()
-                ?: error("Unsupported annotation constant: ${expression.text}")
-            is KtPrefixExpression -> -((value(expression.baseExpression!!, seen) as Number).toFloat())
+            is KtConstantExpression -> literal(expression.text)
+            is KtPrefixExpression -> {
+                val operand = value(expression.baseExpression!!, seen)
+                when (expression.operationToken) {
+                    KtTokens.PLUS -> operand
+                    KtTokens.MINUS -> arithmetic(0, operand as Number, KtTokens.MINUS)
+                    KtTokens.EXCL -> !(operand as Boolean)
+                    else -> error("Unsupported annotation expression: ${expression.text}")
+                }
+            }
             is KtParenthesizedExpression -> value(expression.expression!!, seen)
             is KtBinaryExpression -> {
-                require(expression.operationToken == KtTokens.PLUS) { "Unsupported annotation expression: ${expression.text}" }
                 val left = value(expression.left!!, seen)
                 val right = value(expression.right!!, seen)
-                if (left is String || right is String) left.toString() + right.toString() else (left as Number).toFloat() + (right as Number).toFloat()
+                if (expression.operationToken == KtTokens.PLUS && (left is String || right is String)) left.toString() + right.toString()
+                else arithmetic(left as Number, right as Number, expression.operationToken)
             }
             else -> {
                 val name = resolve(expression.text)
