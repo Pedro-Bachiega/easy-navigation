@@ -36,6 +36,8 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
 
       - name: Validate configuration cache
         run: ./gradlew help --configuration-cache --no-daemon
@@ -68,6 +70,8 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
       - name: Compile and link both iOS frameworks
         run: ./gradlew :sample:app:linkDebugFrameworkIosArm64 :sample:app:linkDebugFrameworkIosSimulatorArm64 :integration:consumer:compileKotlinIosArm64 :integration:consumer:compileKotlinIosSimulatorArm64 --no-daemon
       - name: Upload generated source declarations
