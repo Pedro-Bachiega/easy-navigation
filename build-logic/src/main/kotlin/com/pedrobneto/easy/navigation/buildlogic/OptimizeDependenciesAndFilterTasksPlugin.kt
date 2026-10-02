@@ -16,6 +16,9 @@ internal class OptimizeDependenciesAndFilterTasksPlugin : Plugin<Project> {
         val libraries = target.libs
         val allDefinedLibraries = libraries.allDefinedDependencies
         target.configurations.configureEach {
+            // Lint tools ship their own compiler. Project compiler/version alignment must not
+            // replace Detekt or ktlint's implementation dependencies.
+            if (name.startsWith("detekt") || name.startsWith("ktlint")) return@configureEach
             resolutionStrategy {
                 failOnVersionConflict()
                 preferProjectModules()
