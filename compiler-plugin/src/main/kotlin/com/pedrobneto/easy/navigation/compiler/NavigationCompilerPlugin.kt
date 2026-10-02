@@ -59,7 +59,7 @@ private class DestinationChecker(private val messages: MessageCollector) : FirNa
         val annotations = declaration.annotations.associateBy { it.toAnnotationClassId(session)?.asSingleFqName()?.asString() }
         if (annotations.keys.none { it in DESTINATION_ANNOTATIONS }) return
         val routeAnnotation = annotations[ROUTE] ?: return
-        val routeType = routeAnnotation.getKClassArgument(Name.identifier("value"))?.fullyExpandedType(session) as? ConeClassLikeType ?: return
+        val routeType = routeAnnotation.getKClassArgument(Name.identifier("value"))?.fullyExpandedType() as? ConeClassLikeType ?: return
         val routeSymbol = session.symbolProvider.getClassLikeSymbolByClassId(routeType.lookupTag.classId) as? FirRegularClassSymbol ?: return
 
         fun error(message: String) {
@@ -76,7 +76,7 @@ private class DestinationChecker(private val messages: MessageCollector) : FirNa
             if (!visited.add(symbol.classId)) return false
             if (symbol.classId.asSingleFqName().asString() == "$CORE.model.NavigationRoute") return true
             return symbol.fir.superTypeRefs.any { ref ->
-                val type = ref.coneType.fullyExpandedType(session) as? ConeClassLikeType ?: return@any false
+                val type = ref.coneType.fullyExpandedType() as? ConeClassLikeType ?: return@any false
                 val parent = session.symbolProvider.getClassLikeSymbolByClassId(type.lookupTag.classId) as? FirRegularClassSymbol
                 parent != null && implementsRoute(parent, visited)
             }
@@ -92,7 +92,7 @@ private class DestinationChecker(private val messages: MessageCollector) : FirNa
         if (declaration.receiverParameter != null || declaration.typeParameters.isNotEmpty()) error("destination ${declaration.name} cannot require a receiver or type arguments.")
         if (declaration.contextParameters.isNotEmpty()) error("destination ${declaration.name} cannot require context parameters.")
         val matching = declaration.valueParameters.filter {
-            (it.returnTypeRef.coneType.fullyExpandedType(session) as? ConeClassLikeType)?.lookupTag?.classId == routeSymbol.classId
+            (it.returnTypeRef.coneType.fullyExpandedType() as? ConeClassLikeType)?.lookupTag?.classId == routeSymbol.classId
         }
         if (matching.size > 1) error("destination ${declaration.name} has multiple route parameters.")
         declaration.valueParameters.filter { it !in matching }.forEach {
