@@ -45,36 +45,83 @@ internal val LocalParentNavigationController: ProvidableCompositionLocal<Navigat
     staticCompositionLocalOf { null }
 
 /**
- * Creates and remembers a [NavigationController] instance.
- *
- * @param initialRoute The initial route to be displayed when the navigation is first set up.
- * @param directionRegistries A list of [DirectionRegistry] instances containing all possible navigation directions.
- * @param backStack An optional [NavBackStack] to be used as the back stack. If not provided,
- * a new one will be created with the [initialRoute].
- * @param json The [Json] instance used for deserializing route arguments.
- * @return A remembered [NavigationController] instance.
+ * Remembers a controller initialized from a route.
+ * Initial arguments only apply to a new stack; saved state takes precedence.
  */
 @Composable
 @KoverExcludes
 fun rememberNavigationController(
     initialRoute: NavigationRoute,
     directionRegistries: List<DirectionRegistry>,
-    backStack: NavBackStack<NavigationRoute> = rememberNavBackStack(
-        initialRoute,
-        directionRegistries
+    json: Json = defaultNavigationJson(),
+): NavigationController = rememberNavigationController(
+    backStack = rememberNavBackStack(
+        initialRoute = initialRoute,
+        registries = directionRegistries,
     ),
-    json: Json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-        prettyPrint = true
-    }
+    directionRegistries = directionRegistries,
+    json = json,
+)
+
+/**
+ * Remembers a controller initialized from a deeplink.
+ * Initial arguments only apply to a new stack; saved state takes precedence.
+ */
+@Composable
+@KoverExcludes
+fun rememberNavigationController(
+    initialRoute: String,
+    directionRegistries: List<DirectionRegistry>,
+    json: Json = defaultNavigationJson(),
+): NavigationController = rememberNavigationController(
+    backStack = rememberNavBackStack(
+        initialRoute = initialRoute,
+        registries = directionRegistries,
+        json = json,
+    ),
+    directionRegistries = directionRegistries,
+    json = json,
+)
+
+/**
+ * Remembers a controller initialized from a deeplink and serializable payload.
+ * Initial arguments only apply to a new stack; saved state takes precedence.
+ */
+@Composable
+@KoverExcludes
+inline fun <reified T> rememberNavigationController(
+    initialRoute: String,
+    payload: T,
+    directionRegistries: List<DirectionRegistry>,
+    json: Json = defaultNavigationJson(),
+): NavigationController = rememberNavigationController(
+    backStack = rememberNavBackStack(
+        initialRoute = initialRoute,
+        payload = payload,
+        registries = directionRegistries,
+        json = json,
+    ),
+    directionRegistries = directionRegistries,
+    json = json,
+)
+
+/**
+ * Remembers a controller for an existing back stack without requiring an initial route.
+ * The caller owns the stack's saving and restoration.
+ */
+@Composable
+@KoverExcludes
+fun rememberNavigationController(
+    backStack: NavBackStack<NavigationRoute>,
+    directionRegistries: List<DirectionRegistry>,
+    json: Json = defaultNavigationJson(),
 ): NavigationController {
     val parentController = LocalParentNavigationController.current
     val resultState = rememberSerializable(
         stateSerializer = NavigationResultState.serializer(),
         init = { mutableStateOf(NavigationResultState.initial(backStack.size)) },
     )
-    return remember(initialRoute, directionRegistries, resultState) {
+    return remember(backStack, directionRegistries, parentController, json, resultState) {
         NavigationController(
             backStack = backStack,
             directionRegistryList = directionRegistries,

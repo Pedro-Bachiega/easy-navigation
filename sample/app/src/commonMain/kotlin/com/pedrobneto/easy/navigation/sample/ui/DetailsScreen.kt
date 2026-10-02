@@ -156,8 +156,6 @@ private fun DetailsContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            initialRoute = initialRoute,
-            directionRegistries = registries,
             controller = subNavigationController
         )
     }

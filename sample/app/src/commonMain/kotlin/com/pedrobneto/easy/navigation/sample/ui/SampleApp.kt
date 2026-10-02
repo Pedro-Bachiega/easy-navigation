@@ -71,7 +71,6 @@ fun NavigationSample() {
         registries = registries
     )
     val navigationController = rememberNavigationController(
-        initialRoute = initialRoute,
         directionRegistries = registries,
         backStack = backStack
     )
@@ -120,8 +119,6 @@ fun NavigationSample() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                initialRoute = initialRoute,
-                directionRegistries = registries,
                 controller = navigationController,
                 sceneStrategies = rememberDefaultSceneStrategies(
                     isUsingAdaptiveLayout = isUsingAdaptiveLayout,

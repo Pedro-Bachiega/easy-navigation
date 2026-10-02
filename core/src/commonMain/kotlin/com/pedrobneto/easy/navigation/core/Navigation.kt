@@ -17,27 +17,11 @@ import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.core.transition.NavigationTransitions
 import com.pedrobneto.easy.navigation.test.KoverExcludes
+import kotlinx.serialization.json.Json
 
 /**
- * A composable that provides a navigation controller and displays the current navigation entry.
- *
- * This composable is the root of the navigation system. It creates a [NavigationController]
- * and provides it to the composition via [LocalNavigationController]. It also displays the
- * current navigation entry using [NavDisplay].
- *
- * @param modifier The modifier to be applied to the navigation container.
- * @param initialRoute The initial route to be displayed.
- * @param directionRegistries The list of direction registries to be used for navigation.
- * @param controller The navigation controller to be provided to the content.
- * @param contentAlignment The alignment of the content within the navigation container.
- * @param entryDecorators A list of decorators to be applied to each navigation entry.
- * @param sceneStrategies The strategies to be used for displaying scenes.
- * @param sceneDecoratorStrategies A list of decorators to be applied to each scene.
- * @param sharedTransitionScope The shared transition scope to allow transitions between scenes.
- * @param sizeTransform The transform to be applied to the size of the content.
- * @param transitionSpec The transition spec to be used for transitions between scenes.
- * @param popTransitionSpec The transition spec to be used for pop transitions between scenes.
- * @param predictivePopTransitionSpec The transition spec to be used for predictive pop transitions between scenes.
+ * Displays an existing controller and provides it to the composition.
+ * The controller already owns the back stack and direction registries.
  */
 @Composable
 @ExperimentalMaterial3AdaptiveApi
@@ -45,12 +29,7 @@ import com.pedrobneto.easy.navigation.test.KoverExcludes
 @Suppress("ComposableNaming")
 fun Navigation(
     modifier: Modifier,
-    initialRoute: NavigationRoute,
-    directionRegistries: List<DirectionRegistry>,
-    controller: NavigationController = rememberNavigationController(
-        initialRoute = initialRoute,
-        directionRegistries = directionRegistries
-    ),
+    controller: NavigationController,
     contentAlignment: Alignment = Alignment.TopStart,
     entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator()),
@@ -79,3 +58,116 @@ fun Navigation(
         onBack = controller::handleSystemBack,
     )
 }
+
+/**
+ * Creates navigation from a route.
+ * Initial arguments only apply to a new stack; saved state takes precedence.
+ */
+@Composable
+@ExperimentalMaterial3AdaptiveApi
+@KoverExcludes
+@Suppress("ComposableNaming")
+fun Navigation(
+    modifier: Modifier,
+    initialRoute: NavigationRoute,
+    directionRegistries: List<DirectionRegistry>,
+    json: Json = defaultNavigationJson(),
+    contentAlignment: Alignment = Alignment.TopStart,
+    entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
+        listOf(rememberSaveableStateHolderNavEntryDecorator()),
+    transitions: NavigationTransitions = NavigationTransitions(),
+    sceneStrategies: List<SceneStrategy<NavigationRoute>> = rememberDefaultSceneStrategies(),
+    sceneDecoratorStrategies: List<SceneDecoratorStrategy<NavigationRoute>> = emptyList(),
+    sharedTransitionScope: SharedTransitionScope? = null,
+    sizeTransform: SizeTransform? = null,
+) = Navigation(
+    modifier = modifier,
+    controller = rememberNavigationController(
+        initialRoute = initialRoute,
+        directionRegistries = directionRegistries,
+        json = json,
+    ),
+    contentAlignment = contentAlignment,
+    entryDecorators = entryDecorators,
+    transitions = transitions,
+    sceneStrategies = sceneStrategies,
+    sceneDecoratorStrategies = sceneDecoratorStrategies,
+    sharedTransitionScope = sharedTransitionScope,
+    sizeTransform = sizeTransform,
+)
+
+/**
+ * Creates navigation from a deeplink.
+ * Initial arguments only apply to a new stack; saved state takes precedence.
+ */
+@Composable
+@ExperimentalMaterial3AdaptiveApi
+@KoverExcludes
+@Suppress("ComposableNaming")
+fun Navigation(
+    modifier: Modifier,
+    initialRoute: String,
+    directionRegistries: List<DirectionRegistry>,
+    json: Json = defaultNavigationJson(),
+    contentAlignment: Alignment = Alignment.TopStart,
+    entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
+        listOf(rememberSaveableStateHolderNavEntryDecorator()),
+    transitions: NavigationTransitions = NavigationTransitions(),
+    sceneStrategies: List<SceneStrategy<NavigationRoute>> = rememberDefaultSceneStrategies(),
+    sceneDecoratorStrategies: List<SceneDecoratorStrategy<NavigationRoute>> = emptyList(),
+    sharedTransitionScope: SharedTransitionScope? = null,
+    sizeTransform: SizeTransform? = null,
+) = Navigation(
+    modifier = modifier,
+    controller = rememberNavigationController(
+        initialRoute = initialRoute,
+        directionRegistries = directionRegistries,
+        json = json,
+    ),
+    contentAlignment = contentAlignment,
+    entryDecorators = entryDecorators,
+    transitions = transitions,
+    sceneStrategies = sceneStrategies,
+    sceneDecoratorStrategies = sceneDecoratorStrategies,
+    sharedTransitionScope = sharedTransitionScope,
+    sizeTransform = sizeTransform,
+)
+
+/**
+ * Creates navigation from a deeplink and serializable payload.
+ * Initial arguments only apply to a new stack; saved state takes precedence.
+ */
+@Composable
+@ExperimentalMaterial3AdaptiveApi
+@KoverExcludes
+@Suppress("ComposableNaming")
+inline fun <reified T> Navigation(
+    modifier: Modifier,
+    initialRoute: String,
+    payload: T,
+    directionRegistries: List<DirectionRegistry>,
+    json: Json = defaultNavigationJson(),
+    contentAlignment: Alignment = Alignment.TopStart,
+    entryDecorators: List<NavEntryDecorator<NavigationRoute>> =
+        listOf(rememberSaveableStateHolderNavEntryDecorator()),
+    transitions: NavigationTransitions = NavigationTransitions(),
+    sceneStrategies: List<SceneStrategy<NavigationRoute>> = rememberDefaultSceneStrategies(),
+    sceneDecoratorStrategies: List<SceneDecoratorStrategy<NavigationRoute>> = emptyList(),
+    sharedTransitionScope: SharedTransitionScope? = null,
+    sizeTransform: SizeTransform? = null,
+) = Navigation(
+    modifier = modifier,
+    controller = rememberNavigationController(
+        initialRoute = initialRoute,
+        payload = payload,
+        directionRegistries = directionRegistries,
+        json = json,
+    ),
+    contentAlignment = contentAlignment,
+    entryDecorators = entryDecorators,
+    transitions = transitions,
+    sceneStrategies = sceneStrategies,
+    sceneDecoratorStrategies = sceneDecoratorStrategies,
+    sharedTransitionScope = sharedTransitionScope,
+    sizeTransform = sizeTransform,
+)
