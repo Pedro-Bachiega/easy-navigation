@@ -11,7 +11,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.jetbrains.compose.foundation)
-            implementation(libs.jetbrains.compose.material3.adaptive.navigation3)
+            api(libs.jetbrains.compose.material3.adaptive.navigation3)
             api(libs.jetbrains.compose.navigation3.ui)
             api(libs.jetbrains.serialization)
             implementation(libs.toolkit.arch.lumber)

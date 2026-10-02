@@ -1,5 +1,6 @@
 package consumer
 
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.pedrobneto.easy.navigation.core.Navigation
@@ -11,6 +12,7 @@ import fixture.Home
 // This module does not apply the compiler plugin: published metadata must expose both registries.
 val registries: List<DirectionRegistry> = listOf(FeatureDirectionRegistry, AccountDirectionRegistry)
 
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun ConsumerNavigation() {
     Navigation(modifier = Modifier, initialRoute = Home, directionRegistries = registries)
