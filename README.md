@@ -257,20 +257,55 @@ val backStack = rememberNavBackStack(
     registries = registries
 )
 val controller = rememberNavigationController(
-    initialRoute = HomeRoute,
     directionRegistries = registries,
     backStack = backStack
 )
 
 Navigation(
     modifier = Modifier.fillMaxSize(),
-    initialRoute = HomeRoute,
-    directionRegistries = registries,
     controller = controller
 )
 ```
 
 Nested graphs use the same pattern: create a child controller with its own initial route and pass it to a nested `Navigation` composable.
+
+### Initial deeplinks
+
+`Navigation`, `rememberNavigationController`, and `rememberNavBackStack` accept either a
+`NavigationRoute` or a deeplink `String` as `initialRoute`. Deeplinks use the same resolution,
+JSON configuration, and serializable payload support as `NavigationController.navigateTo`.
+
+```kotlin
+Navigation(
+    modifier = Modifier.fillMaxSize(),
+    initialRoute = "/details/123",
+    directionRegistries = registries,
+)
+
+val controller = rememberNavigationController(
+    initialRoute = "/details/123",
+    payload = DetailsPayload(source = "notification"),
+    directionRegistries = registries,
+)
+
+val backStack = rememberNavBackStack(
+    initialRoute = "/details/123",
+    registries = registries,
+)
+```
+
+The optional `payload` must serialize to a JSON object, just as for controller navigation.
+Payload arguments override query and path arguments. Deeplink overloads accept `json` for
+custom deserialization; controller initialization uses that same instance for later navigation.
+Invalid deeplinks, unmatched destinations, and incompatible arguments propagate resolution errors.
+Initial routes and payloads apply only when creating a new stack. Recomposition does not navigate
+or reset the stack, and restored state takes precedence without resolving the initial deeplink.
+Use `controller.navigateTo(...)` for deeplinks received after initialization.
+
+When passing a controller to `Navigation`, omit `initialRoute` and `directionRegistries`.
+When passing a back stack to `rememberNavigationController`, omit `initialRoute` and keep
+`directionRegistries` for destination registration. The previous signatures accepting both
+initial state and an existing controller or back stack have been removed.
 
 ### Navigation transitions
 
