@@ -2,11 +2,8 @@ package com.pedrobneto.easy.navigation.core
 
 import androidx.compose.runtime.AbstractApplier
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ControlledComposition
 import androidx.compose.runtime.Recomposer
-import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
-import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.navigation3.runtime.NavBackStack
 import com.pedrobneto.easy.navigation.core.extension.rememberNavBackStack
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
@@ -103,32 +100,6 @@ class NavigationInitializationTest {
     }
 
     @Test
-    fun restoredStackDoesNotResolveInvalidInitialDeeplink() {
-        var registry = SaveableStateRegistry(restoredValues = null, canBeSaved = { true })
-        var deeplink = "/details/12"
-        var payload = Payload(42, "saved")
-        lateinit var stack: NavBackStack<NavigationRoute>
-        lateinit var saved: Map<String, List<Any?>>
-        val content: @Composable () -> Unit = {
-            CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
-                stack = rememberNavBackStack(deeplink, payload, registries)
-            }
-        }
-        withComposition { composition ->
-            composition.setContent(content)
-            stack.add(Details(99))
-            saved = registry.performSave()
-        }
-        registry = SaveableStateRegistry(saved, canBeSaved = { true })
-        deeplink = "invalid"
-        payload = Payload(100, "changed")
-        withComposition { composition ->
-            composition.setContent(content)
-            assertEquals(listOf(Details(42, "saved"), Details(99)), stack.toList())
-        }
-    }
-
-    @Test
     fun invalidInitialDeeplinksPropagateResolutionErrors() {
         for (deeplink in listOf("invalid", "/missing", "/details/not-a-number")) {
             assertFailsWith<IllegalArgumentException> {
@@ -140,12 +111,12 @@ class NavigationInitializationTest {
     }
 
     @Serializable
-    private data class Details(val id: Int, val source: String = "default") : NavigationRoute
+    internal data class Details(val id: Int, val source: String = "default") : NavigationRoute
 
     @Serializable
-    private data class Payload(val id: Int, val source: String)
+    internal data class Payload(val id: Int, val source: String)
 
-    private object DetailsDirection : NavigationDirection(
+    internal object DetailsDirection : NavigationDirection(
         routeClass = Details::class,
         deeplinks = listOf(NavigationDeeplink("/details/{id}")),
     ) {
@@ -156,42 +127,42 @@ class NavigationInitializationTest {
         @Composable
         override fun Draw(route: NavigationRoute) = Unit
     }
+}
 
-    private fun withComposition(block: (TestComposition) -> Unit) {
-        val composition = TestComposition()
-        try {
-            block(composition)
-        } finally {
-            composition.dispose()
-        }
+internal fun withComposition(block: (TestComposition) -> Unit) {
+    val composition = TestComposition()
+    try {
+        block(composition)
+    } finally {
+        composition.dispose()
+    }
+}
+
+internal class TestComposition {
+    private val recomposer = Recomposer(EmptyCoroutineContext)
+    private val composition = ControlledComposition(UnitApplier(), recomposer)
+
+    fun setContent(content: @Composable () -> Unit) {
+        composition.composeContent(content)
+        composition.applyChanges()
     }
 
-    private class TestComposition {
-        private val recomposer = Recomposer(EmptyCoroutineContext)
-        private val composition = ControlledComposition(UnitApplier(), recomposer)
-
-        fun setContent(content: @Composable () -> Unit) {
-            composition.composeContent(content)
-            composition.applyChanges()
-        }
-
-        fun recompose() {
-            composition.invalidateAll()
-            composition.recompose()
-            composition.applyChanges()
-        }
-
-        fun dispose() {
-            composition.dispose()
-            recomposer.cancel()
-        }
+    fun recompose() {
+        composition.invalidateAll()
+        composition.recompose()
+        composition.applyChanges()
     }
 
-    private class UnitApplier : AbstractApplier<Unit>(Unit) {
-        override fun insertTopDown(index: Int, instance: Unit) = Unit
-        override fun insertBottomUp(index: Int, instance: Unit) = Unit
-        override fun remove(index: Int, count: Int) = Unit
-        override fun move(from: Int, to: Int, count: Int) = Unit
-        override fun onClear() = Unit
+    fun dispose() {
+        composition.dispose()
+        recomposer.cancel()
     }
+}
+
+private class UnitApplier : AbstractApplier<Unit>(Unit) {
+    override fun insertTopDown(index: Int, instance: Unit) = Unit
+    override fun insertBottomUp(index: Int, instance: Unit) = Unit
+    override fun remove(index: Int, count: Int) = Unit
+    override fun move(from: Int, to: Int, count: Int) = Unit
+    override fun onClear() = Unit
 }
