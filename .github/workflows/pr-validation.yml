@@ -58,6 +58,8 @@ jobs:
         run: bash .github/scripts/verify-published-consumer.sh
 
       - name: Run checks
+        env:
+          LINT_PRINT_STACKTRACE: "true"
         run: ./gradlew check --no-daemon
 
       - name: Upload published consumer generated sources
