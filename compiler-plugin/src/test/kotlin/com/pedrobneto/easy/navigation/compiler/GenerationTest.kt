@@ -89,6 +89,35 @@ class GenerationTest {
         }.message.orEmpty())
     }
 
+    @Test
+    fun `aliases and source constants preserve route identity and annotation values`() = fixture { root ->
+        val routes = source(root, "Routes.kt", """
+            package sample
+            class Home
+            typealias Landing = Home
+            const val SCHEME = "app"
+            const val RATIO = 1f / 2f
+        """)
+        val screen = source(root, "Screen.kt", """
+            package screen
+            import androidx.compose.runtime.Composable
+            import com.pedrobneto.easy.navigation.core.annotation.*
+            import com.pedrobneto.easy.navigation.core.adaptive.AdaptivePane
+            import sample.Landing as Start
+            import sample.SCHEME
+            import sample.RATIO
+            @Composable @Route(Start::class) @Deeplink(SCHEME + "://home") @AdaptivePane(RATIO)
+            fun Screen(route: Start) {}
+        """)
+        val output = File(root, "generated")
+        generate(output, "app", mapOf("main" to emptyList()), mapOf("main" to listOf(routes, screen)), listOf(GenerationTree("main", "main", listOf("main"))))
+        val direction = File(output, "main/sample/HomeDirection.kt").readText()
+        assertTrue("Home.serializer()" in direction)
+        assertTrue("route = route as Home" in direction)
+        assertTrue("app://home" in direction)
+        assertTrue("0.5f" in direction)
+    }
+
     private fun source(root: File, name: String, text: String): File = File(root, name).apply {
         parentFile.mkdirs()
         writeText(text.trimIndent())
