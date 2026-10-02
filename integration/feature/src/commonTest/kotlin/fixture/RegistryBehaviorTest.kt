@@ -18,7 +18,9 @@ class RegistryBehaviorTest {
     @Test
     fun registryIncludesSharedAndOnlyTheCurrentPlatform() {
         val names = FeatureDirectionRegistry.directions.map { it.routeClass.simpleName }.toSet()
-        assertEquals(setOf("Home", "Details", "Dialog", "Extra", platformRouteName()), names)
+        val expected = setOf("Home", "Details", "Dialog", "Extra", platformRouteName()) +
+            if (platformRouteName() == "DesktopOnly") emptySet() else setOf("MobileOnly")
+        assertEquals(expected, names)
         assertEquals(listOf(Account::class), AccountDirectionRegistry.directions.map { it.routeClass })
     }
 
@@ -26,6 +28,8 @@ class RegistryBehaviorTest {
     fun metadataAndSerializationMatchTheAnnotationContract() {
         val details = FeatureDirectionRegistry.directions.single { it.routeClass == Details::class }
         assertEquals(Home::class, details.parentRouteClass)
+        assertEquals("fixture://home", details.parentDeeplink?.raw)
+        assertEquals(listOf("fixture://details/{id}", "fixture://legacy/details/{id}"), details.deeplinks.map { it.raw })
         assertEquals(PaneStrategy.Adaptive(.7f), details.paneStrategy)
         assertTrue(FeatureDirectionRegistry.directions.single { it.routeClass == Dialog::class }.isModal)
         assertEquals(PaneStrategy.Single, FeatureDirectionRegistry.directions.single { it.routeClass == Home::class }.paneStrategy)

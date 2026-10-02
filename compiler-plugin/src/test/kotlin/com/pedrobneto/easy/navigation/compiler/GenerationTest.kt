@@ -18,7 +18,7 @@ class GenerationTest {
             import com.pedrobneto.easy.navigation.core.annotation.*
             import com.pedrobneto.easy.navigation.core.adaptive.*
             import sample.routes.Home
-            @UI @Route(Home::class) @Deeplink("app://home") @AdaptivePane(ratio = .75f)
+            @UI @GlobalScope @Route(Home::class) @Deeplink("app://home") @AdaptivePane(ratio = .75f)
             fun HomeScreen() {}
         """)
         val android = source(root, "platform/screen.kt", """
@@ -37,6 +37,7 @@ class GenerationTest {
         val home = File(output, "shared/sample/routes/HomeDirection.kt").readText()
         assertTrue("internal data object HomeDirection" in home)
         assertTrue("Home.serializer()" in home)
+        assertTrue("@GlobalScope" in home)
         assertTrue("HomeScreen()" in home)
         assertTrue("0.75f" in home)
         assertTrue("app://home" in home)

@@ -20,14 +20,14 @@ if ./gradlew :integration:feature:compileKotlinJvm --configuration-cache --no-da
     echo 'Expected FIR validation to reject a route without @Serializable.' >&2
     exit 1
 fi
-if ! rg -F 'must be @Serializable' "$log"; then
+if ! grep -F 'must be @Serializable' "$log"; then
     cat "$log"
     exit 1
 fi
 
 rm "$fixture"
 ./gradlew :integration:consumer:compileKotlinJvm :integration:feature:jvmTest --configuration-cache --no-daemon
-if rg -l 'Unserializable' integration/feature/build/generated/easyNavigation/kotlin; then
+if grep -R -l 'Unserializable' integration/feature/build/generated/easyNavigation/kotlin; then
     echo 'Removed destinations survived incremental generation.' >&2
     exit 1
 fi

@@ -72,8 +72,24 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: false
-      - name: Compile and link both iOS frameworks
-        run: ./gradlew :sample:app:linkDebugFrameworkIosArm64 :sample:app:linkDebugFrameworkIosSimulatorArm64 :integration:consumer:compileKotlinIosArm64 :integration:consumer:compileKotlinIosSimulatorArm64 --no-daemon
+      - name: Restore Kotlin Native cache
+        id: konan-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-${{ runner.arch }}-konan-${{ hashFiles('gradle/libs.versions.toml') }}
+      - name: Compile both iOS consumer APIs
+        run: ./gradlew :integration:consumer:compileKotlinIosArm64 :integration:consumer:compileKotlinIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
+      - name: Link iOS ARM64 sample framework
+        run: ./gradlew :sample:app:linkDebugFrameworkIosArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
+      - name: Link iOS Simulator ARM64 sample framework
+        run: ./gradlew :sample:app:linkDebugFrameworkIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
+      - name: Save Kotlin Native cache
+        if: always() && steps.konan-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.konan
+          key: ${{ steps.konan-cache.outputs.cache-primary-key }}
       - name: Upload generated source declarations
         if: always()
         uses: actions/upload-artifact@v4

@@ -16,7 +16,10 @@ kotlin {
                 implementation(libs.jetbrains.serialization)
             }
         }
-        val sharedDevice by creating { dependsOn(commonMain.get()) }
+        val sharedDevice by creating {
+            dependsOn(commonMain.get())
+            kotlin.setSrcDirs(listOf("destinations/device"))
+        }
         androidMain.get().dependsOn(sharedDevice)
         iosMain.get().dependsOn(sharedDevice)
         androidMain.get().kotlin.setSrcDirs(listOf("destinations/android"))

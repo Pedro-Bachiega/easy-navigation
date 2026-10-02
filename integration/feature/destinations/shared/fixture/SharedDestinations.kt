@@ -29,6 +29,7 @@ fun HomeScreen() = Unit
 @Composable
 @Route(Details::class)
 @Deeplink("fixture://details/{id}")
+@Deeplink("fixture://legacy/details/{id}")
 @ParentRoute(Home::class)
 @ParentDeeplink("fixture://home")
 @AdaptivePane(ratio = .7f)
