@@ -9,7 +9,7 @@ kotlin {
     jvmToolchain(21)
     jvm()
     sourceSets.commonMain.dependencies {
-        implementation("io.github.pedro-bachiega:easy-navigation-feature:0.0.1-compiler-ci")
+        implementation("io.github.pedro-bachiega:easy-navigation-core:0.0.1-compiler-ci")
         implementation("org.jetbrains.compose.runtime:runtime:1.12.0")
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     }

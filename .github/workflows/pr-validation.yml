@@ -46,10 +46,10 @@ jobs:
         run: ./gradlew :compiler-plugin:test --no-daemon
 
       - name: Compile generated common and JVM consumer APIs
-        run: ./gradlew :sample:app:compileCommonMainKotlinMetadata :sample:app:compileKotlinJvm :integration:consumer:compileCommonMainKotlinMetadata :integration:consumer:compileKotlinJvm :integration:feature:jvmTest --no-daemon
+        run: ./gradlew :sample:app:compileCommonMainKotlinMetadata :sample:app:compileKotlinJvm :sample:consumer:compileCommonMainKotlinMetadata :sample:consumer:compileKotlinJvm :sample:feature:jvmTest --no-daemon
 
       - name: Compile Android consumer APIs
-        run: ./gradlew :sample:target:android:assembleDebug :integration:consumer:compileAndroidMain --no-daemon
+        run: ./gradlew :sample:target:android:assembleDebug :sample:consumer:compileAndroidMain --no-daemon
 
       - name: Validate FIR errors and incremental consumer compilation
         run: bash .github/scripts/verify-compiler-consumer.sh
@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: published-consumer-generated-sources
-          path: integration/published-consumer/build/generated/easyNavigation/kotlin
+          path: sample/published-consumer/build/generated/easyNavigation/kotlin
 
   native:
     name: Compile iOS consumers
@@ -88,7 +88,7 @@ jobs:
           path: ~/.konan
           key: ${{ runner.os }}-${{ runner.arch }}-konan-${{ hashFiles('gradle/libs.versions.toml') }}
       - name: Compile both iOS consumer APIs
-        run: ./gradlew :integration:consumer:compileKotlinIosArm64 :integration:consumer:compileKotlinIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
+        run: ./gradlew :sample:consumer:compileKotlinIosArm64 :sample:consumer:compileKotlinIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
       - name: Link iOS ARM64 sample framework
         run: ./gradlew :sample:app:linkDebugFrameworkIosArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
       - name: Link iOS Simulator ARM64 sample framework

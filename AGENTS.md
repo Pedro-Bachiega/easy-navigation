@@ -12,6 +12,8 @@ Main modules:
 - `compiler-plugin`: isolated compiler PSI source generator plus FIR semantic validation; generates complete `*Direction` and `*DirectionRegistry` sources.
 - `easy-navigation-gradle-plugin`: Gradle plugin that derives source ownership from the KGP graph, wires generation and compiler artifacts, and registers generated IDE source roots.
 - `sample:app`: shared Compose sample routes and screens.
+- `sample:feature` and `sample:consumer`: non-published multiplatform compiler verification fixtures.
+- `sample/published-consumer`: standalone, non-published consumer of library artifacts staged by CI.
 - `sample:target:desktop`: Compose Desktop launcher for the sample app.
 - `test`: shared test-only helpers, including coverage exclusions.
 - `build-logic`: included build that provides local convention plugins for this repository.
@@ -88,8 +90,9 @@ Add or update tests near the affected behavior. For generated code, prefer compi
 ## Compiler migration verification
 
 - Kotlin support is pinned to 2.4.20; upgrades require a compatibility CI run.
-- `integration:feature` has shared and platform destinations in custom source directories and tests
-  generated behavior; `integration:consumer` consumes its public registry without the compiler plugin.
+- `sample:feature` has shared and platform destinations in custom source directories and tests
+  generated behavior; `sample:consumer` consumes its public registry without the compiler plugin.
+- No sample module applies publishing plugins. CI stages only library artifacts in its temporary repository.
 - Validate with CI only when instructed by the user; do not run local builds/tests in this migration.
 - PR CI compiles common metadata/JVM/Android and links iOS frameworks on macOS.
 - Code is generated before compilation using compiler PSI. FIR validates semantic route requirements

@@ -72,3 +72,8 @@ The incremental delivery and its acceptance gates are:
    configuration cache after deleting a destination.
 6. Run the repository checks and present the PR for review. Validation runs in CI only; no merge
    or public release publication is part of this migration.
+
+All consumer fixtures live under `sample`. Sample modules have no publishing plugin and are
+never staged or released as artifacts. Cross-module registries are verified through project
+dependencies; the standalone consumer verifies only published library artifacts in CI’s temporary
+repository.

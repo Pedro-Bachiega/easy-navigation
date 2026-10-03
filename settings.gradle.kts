@@ -25,8 +25,8 @@ includeBuild("build-logic")
 
 include(
     ":core",
-    ":integration:feature",
-    ":integration:consumer",
+    ":sample:feature",
+    ":sample:consumer",
     ":easy-navigation-gradle-plugin",
     ":compiler-plugin",
     ":sample:app",

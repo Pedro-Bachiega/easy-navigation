@@ -18,6 +18,8 @@ This repository is organized into these Gradle modules:
 - `compiler-plugin`: isolated Kotlin compiler source generator and FIR validator that reads Easy Navigation annotations and generates `*Direction` and `*DirectionRegistry` code.
 - `easy-navigation-gradle-plugin`: Gradle plugin published as `io.github.pedro-bachiega.easy-navigation-library`; it wires generation and FIR validation into Kotlin and Kotlin Multiplatform modules.
 - `sample:app`: shared Compose sample routes, destinations, and app shell.
+- `sample:feature` and `sample:consumer`: cross-module compiler verification fixtures, never published.
+- `sample/published-consumer`: standalone consumer used to verify library artifacts staged by CI; never published.
 - `sample:target:desktop`: Compose Desktop launcher for the sample app.
 - `test`: shared test-only helpers, including coverage exclusions.
 - `build-logic`: included build with local convention plugins used by this repository.

@@ -6,7 +6,7 @@ plugins {
 kotlin {
     android.namespace = "com.pedrobneto.easy.navigation.fixture.consumer"
     sourceSets.commonMain.dependencies {
-        implementation(projects.integration.feature)
+        implementation(projects.sample.feature)
         implementation(libs.jetbrains.serialization)
         implementation(libs.jetbrains.compose.ui)
     }

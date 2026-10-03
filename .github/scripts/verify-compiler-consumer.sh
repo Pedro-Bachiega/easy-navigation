@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-fixture=integration/feature/destinations/shared/fixture/InvalidDestination.kt
+fixture=sample/feature/destinations/shared/fixture/InvalidDestination.kt
 log=$(mktemp)
 trap 'rm -f "$fixture" "$log"' EXIT
 
@@ -15,7 +15,7 @@ class Unserializable : NavigationRoute
 fun InvalidScreen() = Unit
 KOTLIN
 
-if ./gradlew :integration:feature:compileKotlinJvm --configuration-cache --no-daemon > "$log" 2>&1; then
+if ./gradlew :sample:feature:compileKotlinJvm --configuration-cache --no-daemon > "$log" 2>&1; then
     cat "$log"
     echo 'Expected FIR validation to reject a route without @Serializable.' >&2
     exit 1
@@ -26,11 +26,11 @@ if ! grep -F 'must be @Serializable' "$log"; then
 fi
 
 rm "$fixture"
-./gradlew :integration:consumer:compileKotlinJvm :integration:feature:jvmTest --configuration-cache --no-daemon
-if grep -R -l 'Unserializable' integration/feature/build/generated/easyNavigation/kotlin; then
+./gradlew :sample:consumer:compileKotlinJvm :sample:feature:jvmTest --configuration-cache --no-daemon
+if grep -R -l 'Unserializable' sample/feature/build/generated/easyNavigation/kotlin; then
     echo 'Removed destinations survived incremental generation.' >&2
     exit 1
 fi
 
 # Same task graph and input snapshot must be reusable after successful generation.
-./gradlew :integration:consumer:compileKotlinJvm :integration:feature:jvmTest --configuration-cache --configuration-cache-problems=fail --no-daemon
+./gradlew :sample:consumer:compileKotlinJvm :sample:feature:jvmTest --configuration-cache --configuration-cache-problems=fail --no-daemon

@@ -1,7 +1,6 @@
 plugins {
     id("plugin-multiplatform-library")
     id("plugin-compose")
-    id("plugin-multiplatform-publish")
     alias(libs.plugins.easy.navigation.library)
 }
 
