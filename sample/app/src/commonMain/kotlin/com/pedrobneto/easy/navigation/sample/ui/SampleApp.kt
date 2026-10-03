@@ -59,11 +59,6 @@ fun NavigationSample() {
 
     // Feature modules generate registries; the application composes them.
     val (initialRoute, registries) = remember {
-//                FirstScopedRoute to listOf(SampleScopeDirectionRegistry)
-//            }
-
-    // Generated per module using the gradle plugin
-    val (initialRoute, registries) = remember {
         HomeRoute to listOf(FeatureDirectionRegistry, AccountDirectionRegistry)
     }
     // The app owns the saveable stack and controller before handing them to Navigation.
