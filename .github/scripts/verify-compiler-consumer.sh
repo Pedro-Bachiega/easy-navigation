@@ -26,11 +26,11 @@ if ! grep -F 'must be @Serializable' "$log"; then
 fi
 
 rm "$fixture"
-./gradlew :sample:consumer:compileKotlinJvm :sample:feature:jvmTest --configuration-cache --no-daemon
+./gradlew :sample:app:compileKotlinJvm :sample:feature:jvmTest --configuration-cache --no-daemon
 if grep -R -l 'Unserializable' sample/feature/build/generated/easyNavigation/kotlin; then
     echo 'Removed destinations survived incremental generation.' >&2
     exit 1
 fi
 
 # Same task graph and input snapshot must be reusable after successful generation.
-./gradlew :sample:consumer:compileKotlinJvm :sample:feature:jvmTest --configuration-cache --configuration-cache-problems=fail --no-daemon
+./gradlew :sample:app:compileKotlinJvm :sample:feature:jvmTest --configuration-cache --configuration-cache-problems=fail --no-daemon

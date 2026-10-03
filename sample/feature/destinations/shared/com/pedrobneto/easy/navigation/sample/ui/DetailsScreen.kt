@@ -47,7 +47,7 @@ import com.pedrobneto.easy.navigation.core.annotation.Route
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.core.rememberNavigationController
-import com.pedrobneto.easy.navigation.registry.AppDirectionRegistry
+import com.pedrobneto.easy.navigation.registry.FeatureDirectionRegistry
 import com.pedrobneto.easy.navigation.sample.model.DetailsActivityRoute
 import com.pedrobneto.easy.navigation.sample.model.DetailsFaresRoute
 import com.pedrobneto.easy.navigation.sample.model.DetailsOverviewRoute
@@ -76,7 +76,7 @@ private fun DetailsContent(
     onExtraDetailsClick: () -> Unit = {}
 ) {
     val initialRoute = remember(route.id) { DetailsOverviewRoute(route.id) }
-    val registries = remember { listOf(AppDirectionRegistry) }
+    val registries = remember { listOf(FeatureDirectionRegistry) }
     val subNavigationController = rememberNavigationController(
         initialRoute = initialRoute,
         directionRegistries = registries

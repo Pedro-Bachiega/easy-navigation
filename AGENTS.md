@@ -11,8 +11,8 @@ Main modules:
 - `core`: runtime navigation API, Compose integration, adaptive pane behavior, deeplink resolution, and controller/back stack logic.
 - `compiler-plugin`: isolated compiler PSI source generator plus FIR semantic validation; generates complete `*Direction` and `*DirectionRegistry` sources.
 - `easy-navigation-gradle-plugin`: Gradle plugin that derives source ownership from the KGP graph, wires generation and compiler artifacts, and registers generated IDE source roots.
-- `sample:app`: shared Compose sample routes and screens.
-- `sample:feature` and `sample:consumer`: non-published multiplatform compiler verification fixtures.
+- `sample:app`: application shell that aggregates feature registries in Navigation, without the Easy Navigation compiler plugin.
+- `sample:feature`: sample routes/screens and multiplatform compiler verification fixtures; generates registries and is never published.
 - `sample/published-consumer`: standalone, non-published consumer of library artifacts staged by CI.
 - `sample:target:desktop`: Compose Desktop launcher for the sample app.
 - `test`: shared test-only helpers, including coverage exclusions.
@@ -34,7 +34,7 @@ Key packages:
 - Deeplink behavior: `core/src/commonMain/kotlin/com/pedrobneto/easy/navigation/core/model/NavigationDeeplink.kt` and its tests.
 - Compiler generation: `compiler-plugin/src/main/kotlin/com/pedrobneto/easy/navigation/compiler/SourceReader.kt`, `SourceWriter.kt`, `GenerationMain.kt`, and `NavigationCompilerPlugin.kt`.
 - Gradle plugin wiring: `easy-navigation-gradle-plugin/src/main/kotlin/com/pedrobneto/easy/navigation/plugin/BaseGradlePlugin.kt`.
-- Sample usage: `sample/app/src/commonMain/kotlin/com/pedrobneto/easy/navigation/sample/model/_routes.kt` and `sample/app/src/commonMain/kotlin/com/pedrobneto/easy/navigation/sample/ui/SampleApp.kt`.
+- Sample usage: `sample/feature/destinations/shared/com/pedrobneto/easy/navigation/sample/model/_routes.kt` and `sample/app/src/commonMain/kotlin/com/pedrobneto/easy/navigation/sample/ui/SampleApp.kt`.
 - Build setup: `settings.gradle.kts`, root `build.gradle.kts`, `gradle/libs.versions.toml`, and per-module `build.gradle.kts` files.
 
 Avoid loading generated output under `build/`, Gradle caches, or the `build-logic/build/` tree unless diagnosing generated code or build artifacts.
@@ -91,7 +91,7 @@ Add or update tests near the affected behavior. For generated code, prefer compi
 
 - Kotlin support is pinned to 2.4.20; upgrades require a compatibility CI run.
 - `sample:feature` has shared and platform destinations in custom source directories and tests
-  generated behavior; `sample:consumer` consumes its public registry without the compiler plugin.
+  generated behavior; `sample:app` consumes its public registries without the compiler plugin.
 - No sample module applies publishing plugins. CI stages only library artifacts in its temporary repository.
 - Validate with CI only when instructed by the user; do not run local builds/tests in this migration.
 - PR CI compiles common metadata/JVM/Android and links iOS frameworks on macOS.

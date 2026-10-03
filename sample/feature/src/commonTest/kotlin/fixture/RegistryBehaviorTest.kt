@@ -18,7 +18,9 @@ class RegistryBehaviorTest {
     @Test
     fun registryIncludesSharedAndOnlyTheCurrentPlatform() {
         val names = FeatureDirectionRegistry.directions.map { it.routeClass.simpleName }.toSet()
-        val expected = setOf("Home", "Details", "Dialog", "Extra", platformRouteName()) +
+        val sampleRoutes = setOf("HomeRoute", "DetailsRoute", "DetailsOverviewRoute", "DetailsActivityRoute",
+            "DetailsFaresRoute", "ExtraDetailsRoute", "SettingsRoute", "ModalDemoRoute", "SpringModalDemoRoute", "ResultDemoRoute")
+        val expected = sampleRoutes + setOf("Home", "Details", "Dialog", "Extra", platformRouteName()) +
             if (platformRouteName() == "DesktopOnly") emptySet() else setOf("MobileOnly")
         assertEquals(expected, names)
         assertEquals(listOf(Account::class), AccountDirectionRegistry.directions.map { it.routeClass })

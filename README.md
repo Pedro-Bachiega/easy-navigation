@@ -17,8 +17,8 @@ This repository is organized into these Gradle modules:
 - `core`: runtime navigation API, Compose integration, Navigation3 entry wiring, adaptive pane behavior, deeplink resolution, and controller/back stack logic.
 - `compiler-plugin`: isolated Kotlin compiler source generator and FIR validator that reads Easy Navigation annotations and generates `*Direction` and `*DirectionRegistry` code.
 - `easy-navigation-gradle-plugin`: Gradle plugin published as `io.github.pedro-bachiega.easy-navigation-library`; it wires generation and FIR validation into Kotlin and Kotlin Multiplatform modules.
-- `sample:app`: shared Compose sample routes, destinations, and app shell.
-- `sample:feature` and `sample:consumer`: cross-module compiler verification fixtures, never published.
+- `sample:app`: app shell aggregating feature registries without the Easy Navigation compiler plugin.
+- `sample:feature`: sample routes, destinations and compiler verification fixtures; generates registries and is never published.
 - `sample/published-consumer`: standalone consumer used to verify library artifacts staged by CI; never published.
 - `sample:target:desktop`: Compose Desktop launcher for the sample app.
 - `test`: shared test-only helpers, including coverage exclusions.
@@ -98,15 +98,15 @@ fun DetailsScreen(route: DetailsRoute) {
 The compiler generator produces:
 
 - One `*Direction` object per `@Route` destination.
-- A module registry for unscoped destinations, named from the module, such as `AppDirectionRegistry`.
+- A module registry for unscoped destinations, named from the module, such as `FeatureDirectionRegistry`.
 - Scope registries for destinations annotated with `@Scope("name")`, such as `NameDirectionRegistry`.
 
 Generated registries live in `com.pedrobneto.easy.navigation.registry`. Pass one or more registries to `Navigation` or `rememberNavigationController`.
 
 ```kotlin
-import com.pedrobneto.easy.navigation.registry.AppDirectionRegistry
+import com.pedrobneto.easy.navigation.registry.FeatureDirectionRegistry
 
-val registries = remember { listOf(AppDirectionRegistry) }
+val registries = remember { listOf(FeatureDirectionRegistry) }
 ```
 
 ### Adaptive panes
@@ -251,9 +251,6 @@ combine the public registries of their feature modules explicitly.
 Android, JVM, iOS ARM64, and iOS Simulator ARM64 are the supported initial targets. Other Kotlin
 versions and backends are outside the initial compatibility guarantee.
 
-See the [compiler architecture decision](docs/adr/0002-kotlin-compiler-navigation.md) for the
-compilation pipeline, compatibility risks and acceptance gates.
-
 ## Minimal app setup
 
 ```kotlin
@@ -264,11 +261,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
 import com.pedrobneto.easy.navigation.core.Navigation
 import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategies
-import com.pedrobneto.easy.navigation.registry.AppDirectionRegistry
+import com.pedrobneto.easy.navigation.registry.FeatureDirectionRegistry
 
 @Composable
 fun App() {
-    val registries = remember { listOf(AppDirectionRegistry) }
+    val registries = remember { listOf(FeatureDirectionRegistry) }
 
     MaterialTheme {
         Navigation(
@@ -379,7 +376,7 @@ From the repository root:
 
 The sample demonstrates:
 
-- Module registry usage through `AppDirectionRegistry`.
+- Module registry usage through `FeatureDirectionRegistry`.
 - Route and deeplink navigation.
 - Adaptive list/detail panes.
 - A nested detail graph.
