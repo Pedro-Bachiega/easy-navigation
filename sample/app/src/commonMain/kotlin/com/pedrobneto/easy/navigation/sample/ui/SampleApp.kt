@@ -38,7 +38,8 @@ import com.pedrobneto.easy.navigation.core.extension.rememberNavBackStack
 import com.pedrobneto.easy.navigation.core.model.LaunchStrategy
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.core.rememberNavigationController
-import com.pedrobneto.easy.navigation.registry.AppDirectionRegistry
+import com.pedrobneto.easy.navigation.registry.AccountDirectionRegistry
+import com.pedrobneto.easy.navigation.registry.FeatureDirectionRegistry
 import com.pedrobneto.easy.navigation.sample.model.DetailsActivityRoute
 import com.pedrobneto.easy.navigation.sample.model.DetailsFaresRoute
 import com.pedrobneto.easy.navigation.sample.model.DetailsOverviewRoute
@@ -56,14 +57,9 @@ import com.pedrobneto.easy.navigation.sample.model.WindowSize
 fun NavigationSample() {
     var isDarkMode by rememberSaveable { mutableStateOf(false) }
 
-    // Generated per scope using @Scope annotation and the gradle plugin
-//            val (initialRoute, registries) = remember {
-//                FirstScopedRoute to listOf(SampleScopeDirectionRegistry)
-//            }
-
-    // Generated per module using the gradle plugin
+    // Feature modules generate registries; the application composes them.
     val (initialRoute, registries) = remember {
-        HomeRoute to listOf(AppDirectionRegistry)
+        HomeRoute to listOf(FeatureDirectionRegistry, AccountDirectionRegistry)
     }
     // The app owns the saveable stack and controller before handing them to Navigation.
     val backStack = rememberNavBackStack(

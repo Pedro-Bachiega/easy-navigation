@@ -36,9 +36,72 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
 
       - name: Validate configuration cache
         run: ./gradlew help --configuration-cache --no-daemon
 
+      - name: Test compiler generation
+        run: ./gradlew :compiler-plugin:test --no-daemon
+
+      - name: Compile generated common and JVM consumer APIs
+        run: ./gradlew :sample:app:compileCommonMainKotlinMetadata :sample:app:compileKotlinJvm :sample:feature:jvmTest --no-daemon
+
+      - name: Compile Android consumer APIs
+        run: ./gradlew :sample:target:android:assembleDebug :sample:app:compileAndroidMain --no-daemon
+
+      - name: Validate FIR errors and incremental consumer compilation
+        run: bash .github/scripts/verify-compiler-consumer.sh
+
+      - name: Compile a consumer from published artifacts
+        run: bash .github/scripts/verify-published-consumer.sh
+
       - name: Run checks
+        env:
+          LINT_PRINT_STACKTRACE: "true"
         run: ./gradlew check --no-daemon
+
+      - name: Upload published consumer generated sources
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-consumer-generated-sources
+          path: sample/published-consumer/build/generated/easyNavigation/kotlin
+
+  native:
+    name: Compile iOS consumers
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+      - name: Restore Kotlin Native cache
+        id: konan-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-${{ runner.arch }}-konan-${{ hashFiles('gradle/libs.versions.toml') }}
+      - name: Compile both iOS consumer APIs
+        run: ./gradlew :sample:app:compileKotlinIosArm64 :sample:app:compileKotlinIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
+      - name: Link iOS ARM64 sample framework
+        run: ./gradlew :sample:app:linkDebugFrameworkIosArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
+      - name: Link iOS Simulator ARM64 sample framework
+        run: ./gradlew :sample:app:linkDebugFrameworkIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
+      - name: Save Kotlin Native cache
+        if: always() && steps.konan-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.konan
+          key: ${{ steps.konan-cache.outputs.cache-primary-key }}
+      - name: Upload generated source declarations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navigation-ios-generated-sources
+          path: sample/feature/build/generated/easyNavigation/kotlin

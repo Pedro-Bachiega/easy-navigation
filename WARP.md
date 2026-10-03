@@ -95,7 +95,7 @@ The typical consumer pattern (shown in the `sample` app) is:
 The sample modules demonstrate the intended usage:
 - Entry point: `sample:target:desktop` uses `sample/target/desktop/src/jvmMain/kotlin/Main.kt` to launch `NavigationSample`.
 - Routes: `sample:app` declares `HomeRoute`, `DetailsRoute`, nested detail routes, `ExtraDetailsRoute`, and `SettingsRoute` in `sample/app/src/commonMain/kotlin/com/pedrobneto/easy/navigation/sample/model/_routes.kt`.
-- UI: `sample:app` binds composables with `@Route` and `@Deeplink`, then passes generated registries such as `AppDirectionRegistry` into the runtime `Navigation` API.
+- UI: `sample:feature` binds composables with `@Route` and `@Deeplink` and generates registries. `sample:app` aggregates those registries in the runtime `Navigation` API without applying the Easy Navigation plugin.
 - Navigation calls use `LocalNavigationController.current` to navigate by route instance or deeplink and to pop the back stack.
 
 The sample is the best reference for how library consumers should define routes, annotate destinations, and interact with the navigation controller.

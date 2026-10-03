@@ -1,6 +1,6 @@
 # Easy Navigation
 
-Easy Navigation is a Kotlin Multiplatform navigation library for Compose Multiplatform. It sits on top of JetBrains Navigation3 and uses KSP to generate type-safe navigation directions and registries from annotated composable destinations.
+Easy Navigation is a Kotlin Multiplatform navigation library for Compose Multiplatform. It sits on top of JetBrains Navigation3 and uses a Kotlin compiler plugin to generate type-safe navigation directions and registries from annotated composable destinations.
 
 The project currently focuses on:
 
@@ -15,9 +15,11 @@ The project currently focuses on:
 This repository is organized into these Gradle modules:
 
 - `core`: runtime navigation API, Compose integration, Navigation3 entry wiring, adaptive pane behavior, deeplink resolution, and controller/back stack logic.
-- `processor`: JVM KSP processor that reads Easy Navigation annotations and generates `*Direction` and `*DirectionRegistry` code.
-- `easy-navigation-gradle-plugin`: Gradle plugin published as `io.github.pedro-bachiega.easy-navigation-library`; it wires the KSP processor into Kotlin and Kotlin Multiplatform modules.
-- `sample:app`: shared Compose sample routes, destinations, and app shell.
+- `compiler-plugin`: isolated Kotlin compiler source generator and FIR validator that reads Easy Navigation annotations and generates `*Direction` and `*DirectionRegistry` code.
+- `easy-navigation-gradle-plugin`: Gradle plugin published as `io.github.pedro-bachiega.easy-navigation-library`; it wires generation and FIR validation into Kotlin and Kotlin Multiplatform modules.
+- `sample:app`: app shell aggregating feature registries without the Easy Navigation compiler plugin.
+- `sample:feature`: sample routes, destinations and compiler verification fixtures; generates registries and is never published.
+- `sample/published-consumer`: standalone consumer used to verify library artifacts staged by CI; never published.
 - `sample:target:desktop`: Compose Desktop launcher for the sample app.
 - `test`: shared test-only helpers, including coverage exclusions.
 - `build-logic`: included build with local convention plugins used by this repository.
@@ -73,7 +75,7 @@ fun DetailsScreen(route: DetailsRoute) {
 }
 ```
 
-If a destination function has parameters, exactly one parameter must match the route type declared in `@Route`.
+A destination may have at most one parameter matching the route type in `@Route`. Other parameters must have defaults or be varargs. Destinations must be accessible top-level composable functions without receivers, context parameters, or type parameters.
 
 ### Deeplinks and parent navigation
 
@@ -93,18 +95,18 @@ fun DetailsScreen(route: DetailsRoute) {
 
 ### Registries
 
-The KSP processor generates:
+The compiler generator produces:
 
 - One `*Direction` object per `@Route` destination.
-- A module registry for unscoped destinations, named from the module, such as `AppDirectionRegistry`.
+- A module registry for unscoped destinations, named from the module, such as `FeatureDirectionRegistry`.
 - Scope registries for destinations annotated with `@Scope("name")`, such as `NameDirectionRegistry`.
 
 Generated registries live in `com.pedrobneto.easy.navigation.registry`. Pass one or more registries to `Navigation` or `rememberNavigationController`.
 
 ```kotlin
-import com.pedrobneto.easy.navigation.registry.AppDirectionRegistry
+import com.pedrobneto.easy.navigation.registry.FeatureDirectionRegistry
 
-val registries = remember { listOf(AppDirectionRegistry) }
+val registries = remember { listOf(FeatureDirectionRegistry) }
 ```
 
 ### Adaptive panes
@@ -207,7 +209,6 @@ Replace `<latest_version>` with the version you want to use.
 plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
-    id("com.google.devtools.ksp")
     id("io.github.pedro-bachiega.easy-navigation-library") version "<latest_version>"
 }
 
@@ -220,7 +221,35 @@ kotlin {
 }
 ```
 
-The Easy Navigation Gradle plugin expects the KSP plugin to be applied in the module. It adds the Easy Navigation KSP processor to the appropriate KSP configurations and exposes generated common metadata sources for multiplatform projects.
+Easy Navigation supports Kotlin **2.4.20**. Use the same version for Kotlin, Compose Compiler,
+and the Kotlin Serialization compiler plugin. The existing Easy Navigation plugin automatically
+resolves `io.github.pedro-bachiega:easy-navigation-compiler-plugin` at its own version; consumers
+do not declare a compiler dependency or configure a generation DSL.
+
+### Migrating from KSP
+
+Update Kotlin and Easy Navigation, then remove the Easy Navigation KSP processor dependency,
+KSP arguments, and `build/generated/ksp` source-directory wiring. Remove the KSP plugin only
+if no other library needs it. Keep route annotations, generated imports, and `listOf(...)`
+registry composition unchanged. Recompile dependent libraries with the supported Kotlin version.
+
+The `generateEasyNavigation` task writes complete Kotlin files into
+`build/generated/easyNavigation/kotlin/<source-set>`. Compilation and Kotlin IDE import preparation
+depend on generation; you can also run the task explicitly after editing annotations. IntelliJ IDEA
+and Android Studio index these real Kotlin source roots without an Easy Navigation IDE extension.
+This does not promise live updates while typing or a custom generated-body preview.
+
+### Platform registries
+
+The plugin follows the configured Kotlin `dependsOn` graph and source directories, including
+intermediate and custom source sets. A shared registry is an automatically generated `expect object`;
+its platform `actual data object` combines shared and platform-specific destinations from that
+module. Shared directions remain in their declaring source set. Scope registries follow the same
+composition rules. Registries do not discover destinations from dependencies: applications still
+combine the public registries of their feature modules explicitly.
+
+Android, JVM, iOS ARM64, and iOS Simulator ARM64 are the supported initial targets. Other Kotlin
+versions and backends are outside the initial compatibility guarantee.
 
 ## Minimal app setup
 
@@ -232,11 +261,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
 import com.pedrobneto.easy.navigation.core.Navigation
 import com.pedrobneto.easy.navigation.core.adaptive.rememberAdaptiveSceneStrategies
-import com.pedrobneto.easy.navigation.registry.AppDirectionRegistry
+import com.pedrobneto.easy.navigation.registry.FeatureDirectionRegistry
 
 @Composable
 fun App() {
-    val registries = remember { listOf(AppDirectionRegistry) }
+    val registries = remember { listOf(FeatureDirectionRegistry) }
 
     MaterialTheme {
         Navigation(
@@ -326,7 +355,7 @@ Navigation(
 
 ## Code generation
 
-During KSP processing, Easy Navigation:
+During source generation and Kotlin compilation, Easy Navigation:
 
 1. Finds functions annotated with `@Route`, `@Deeplink`, `@ParentRoute`, or `@ParentDeeplink`.
 2. Validates that each destination is `@Composable`.
@@ -335,7 +364,7 @@ During KSP processing, Easy Navigation:
 5. Generates an internal `*Direction` object beside the route package.
 6. Generates unscoped module registries and scoped registries in `com.pedrobneto.easy.navigation.registry`.
 
-Do not edit generated KSP output directly. Change annotations, route types, or the processor instead.
+Do not edit generated output directly. Change annotations, route types, or the compiler generator instead.
 
 ## Running the sample
 
@@ -347,7 +376,7 @@ From the repository root:
 
 The sample demonstrates:
 
-- Module registry usage through `AppDirectionRegistry`.
+- Module registry usage through `FeatureDirectionRegistry`.
 - Route and deeplink navigation.
 - Adaptive list/detail panes.
 - A nested detail graph.
@@ -362,7 +391,7 @@ Use the Gradle wrapper from the repository root.
 ./gradlew check
 ./gradlew detekt ktlintCheck
 ./gradlew :core:jvmTest
-./gradlew :processor:test
+./gradlew :compiler-plugin:test
 ./gradlew :easy-navigation-gradle-plugin:build
 ./gradlew :sample:target:desktop:build
 ```
@@ -370,6 +399,6 @@ Use the Gradle wrapper from the repository root.
 For focused work, prefer the narrowest relevant task first:
 
 - Runtime/navigation behavior: `./gradlew :core:jvmTest`
-- KSP generation: `./gradlew :processor:test`
+- Compiler generation: `./gradlew :compiler-plugin:test`
 - Gradle plugin wiring: `./gradlew :easy-navigation-gradle-plugin:build`
 - Sample integration: `./gradlew :sample:target:desktop:build`
