@@ -1,117 +1,121 @@
 package com.pedrobneto.easy.navigation.plugin
 
-import org.gradle.api.Plugin
+import com.android.build.gradle.tasks.ExtractAnnotations
 import org.gradle.api.Project
-import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinSingleTargetExtension
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
-import java.util.Locale
-import kotlin.reflect.full.declaredMemberProperties
+import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
+import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
+import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 
+private const val SUPPORTED_KOTLIN = "2.4.20"
+private const val ARTIFACT = "easy-navigation-compiler-plugin"
+private const val GROUP = "io.github.pedro-bachiega"
 private val PLUGIN_VERSION: String by lazy {
-    BaseGradlePlugin::class.java.classLoader
-        .getResourceAsStream("easy-navigation-plugin.properties")
-        ?.use { stream ->
-            java.util.Properties().apply { load(stream) }
-        }
-        ?.getProperty("version")
-        ?.takeIf { it.isNotBlank() }
-        ?: error("Could not load Easy Navigation Gradle plugin version.")
+    LibraryGradlePlugin::class.java.classLoader.getResourceAsStream("easy-navigation-plugin.properties")
+        ?.use { java.util.Properties().apply { load(it) }.getProperty("version") }
+        ?.takeIf(String::isNotBlank) ?: error("Could not load Easy Navigation Gradle plugin version.")
 }
 
-abstract class BaseGradlePlugin : Plugin<Project> {
-    protected abstract val commonMainOnly: Boolean
-    protected abstract val processor: String
-
+class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
     override fun apply(target: Project) = with(target) {
-        val kspExtension = extensions.findByName("ksp")
-            ?: error("ksp not implemented for module $name")
-        val argMethod = kspExtension.javaClass
-            .getMethod("arg", String::class.java, String::class.java)
-        argMethod.invoke(kspExtension, "easy-navigation.rootDir", rootDir.path)
+        val generator = configurations.create("easyNavigationGenerator") {
+            isCanBeConsumed = false
+            isCanBeResolved = true
+            description = "Isolated Kotlin source generator for Easy Navigation"
+        }
+        dependencies.add(generator.name, "$GROUP:$ARTIFACT:$PLUGIN_VERSION")
+        dependencies.add(generator.name, "org.jetbrains.kotlin:kotlin-compiler-embeddable:$SUPPORTED_KOTLIN")
+        val generate = tasks.register("generateEasyNavigation", GenerateNavigationTask::class.java) {
+            group = "easy navigation"
+            description = "Generates Kotlin directions and platform registries without KSP"
+            generatorClasspath.from(generator)
+            moduleName.set(project.name)
+            projectDirectory.set(layout.projectDirectory)
+            outputDirectory.set(layout.buildDirectory.dir("generated/easyNavigation/kotlin"))
+        }
 
-        project.afterEvaluate {
-            val isSingleTarget = kotlinExtension.let {
-                when (it) {
-                    is KotlinSingleTargetExtension<*> -> listOf(it.target)
-                    is KotlinMultiplatformExtension -> it.targets
-                    else -> error("Unexpected 'kotlin' extension $it")
+        tasks.matching { it.name == "prepareKotlinIdeaImport" }.configureEach {
+            dependsOn(generate)
+        }
+
+        listOf("com.android.kotlin.multiplatform.library", "com.android.library", "com.android.application").forEach { id ->
+            pluginManager.withPlugin(id) {
+                // AGP's static Kotlin source view drops producer dependencies (KT-59503).
+                tasks.withType(ExtractAnnotations::class.java).configureEach { dependsOn(generate) }
+            }
+        }
+
+        var kotlinConfigured = false
+        listOf("org.jetbrains.kotlin.multiplatform", "org.jetbrains.kotlin.jvm", "org.jetbrains.kotlin.android").forEach { id ->
+            pluginManager.withPlugin(id) {
+                if (kotlinConfigured) return@withPlugin
+                kotlinConfigured = true
+                check(getKotlinPluginVersion() == SUPPORTED_KOTLIN) {
+                    "Easy Navigation supports Kotlin $SUPPORTED_KOTLIN; found ${getKotlinPluginVersion()}. Align Kotlin, Compose Compiler and Serialization plugin versions."
                 }
-            }.toList().size == 2
-
-            if (isSingleTarget) {
-                argMethod.invoke(kspExtension, "isMultiplatformWithSingleTarget", "true")
-            } else {
-                val isUsingKSP2 = kspExtension.javaClass.kotlin.declaredMemberProperties.find {
-                    it.name == "useKsp2"
-                }?.call(kspExtension).let {
-                    (it as Property<*>?)?.get() as Boolean?
-                } ?: project.findProperty("ksp.useKSP2")?.toString()?.toBoolean() ?: false
-
-                if (isUsingKSP2) {
-                    tasks.named { name -> name.startsWith("ksp") }.configureEach {
-                        if (name != "kspCommonMainKotlinMetadata") {
-                            dependsOn("kspCommonMainKotlinMetadata")
-                        }
+                // Default hierarchy edges are created after ordinary afterEvaluate callbacks.
+                // Read the KGP graph only after refines edges have been finalized.
+                withFinalizedNavigationGraph { compilationTrees ->
+                    val extension = kotlinExtension
+                    val targets = when (extension) {
+                        is KotlinMultiplatformExtension -> extension.targets.toList()
+                        is KotlinSingleTargetExtension<*> -> listOf(extension.target)
+                        else -> error("Easy Navigation requires a Kotlin project.")
                     }
-                } else {
-                    tasks.withType(KotlinCompilationTask::class.java).configureEach {
-                        if (name != "kspCommonMainKotlinMetadata") {
-                            dependsOn("kspCommonMainKotlinMetadata")
+                    val compilations = compilationTrees.keys.toList()
+                    val graph = extension.sourceSets.associate { sourceSet -> sourceSet.name to sourceSet.dependsOn.map { it.name }.sorted() }
+                    fun ancestors(name: String): Set<String> = setOf(name) + graph[name].orEmpty().flatMap { ancestors(it) }
+                    val activeSets = compilations.flatMap { ancestors(it.defaultSourceSet.name) }.toSet()
+                    val sourceSets = extension.sourceSets.filter { it.name in activeSets }
+                    val output = layout.buildDirectory.dir("generated/easyNavigation/kotlin").get().asFile
+                    val originalDirectories = sourceSets.associate { sourceSet ->
+                        sourceSet.name to sourceSet.kotlin.srcDirs.filterNot { it.toPath().startsWith(output.toPath()) }
+                    }
+                    val mainSets = compilations.filter { compilationTrees[it] == "main" }.flatMap { ancestors(it.defaultSourceSet.name) }.toSet()
+                    val trees = compilations.groupBy { compilationTrees.getValue(it) }.map { (name, members) ->
+                        val leaves = members.map { it.defaultSourceSet.name }.distinct().sorted()
+                        val shared = leaves.map(::ancestors).reduce { a, b -> a intersect b }.let {
+                            if (name == "main") it else it - mainSets
                         }
+                        val root = if (extension is KotlinMultiplatformExtension) {
+                            shared.filter { candidate -> graph[candidate].orEmpty().none { it in shared } }.singleOrNull()
+                        } else null
+                        "$name:${root.orEmpty()}:${leaves.joinToString(",")}"
+                    }
+                    generate.configure {
+                        dependencyClasspath.from(targets.flatMap { it.compilations.toList() }.filter {
+                            (compilationTrees[it] == "main" && it.target.platformType in setOf(KotlinPlatformType.jvm, KotlinPlatformType.androidJvm)) ||
+                                (it.target.platformType == KotlinPlatformType.common && it.defaultSourceSet.name in mainSets && it.defaultSourceSet.dependsOn.isEmpty())
+                        }.map { it.compileDependencyFiles })
+                        sourceParents.set(graph)
+                        sourceRoots.set(originalDirectories.mapValues { (_, dirs) -> dirs.map { it.relativeTo(projectDir).invariantSeparatorsPath }.sorted() })
+                        this.trees.set(trees)
+                        sourceFiles.from(originalDirectories.values.flatten().map { fileTree(it) { include("**/*.kt") } })
+                    }
+                    sourceSets.forEach { sourceSet ->
+                        sourceSet.kotlin.srcDir(generate.flatMap { it.outputDirectory.dir(sourceSet.name) })
                     }
                 }
             }
         }
-
-        val dependency =
-            "io.github.pedro-bachiega:easy-navigation-$processor-processor:$PLUGIN_VERSION"
-        when (val kotlinExtension = kotlinExtension) {
-            is KotlinSingleTargetExtension<*> -> {
-                dependencies.add("ksp", dependency)
-            }
-
-            is KotlinMultiplatformExtension -> {
-                kotlinExtension.targets.configureEach {
-                    if (platformType == KotlinPlatformType.common) {
-                        dependencies.add("kspCommonMainMetadata", dependency)
-                        return@configureEach
-                    }
-
-                    if (commonMainOnly) return@configureEach
-
-                    val capitalizedTargetName = targetName.replaceFirstChar {
-                        if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString()
-                    }
-
-                    dependencies.add("ksp$capitalizedTargetName", dependency)
-
-                    if (compilations.any { it.name == "test" }) {
-                        dependencies.add("ksp${capitalizedTargetName}Test", dependency)
-                    }
-                }
-
-                kotlinExtension.sourceSets.named { name -> name == "commonMain" }.configureEach {
-                    kotlin.srcDir(
-                        layout.buildDirectory.dir("generated/ksp/metadata/commonMain/kotlin")
-                    )
-                }
-
-                tasks.matching {
-                    it.name.contains("AndroidHostTest") &&
-                        (it.name.startsWith("lint") || it.name == "generateAndroidHostTestLintModel")
-                }.configureEach {
-                    dependsOn("kspAndroidHostTest")
-                }
-            }
+        afterEvaluate {
+            check(kotlinConfigured) { "Easy Navigation requires a Kotlin JVM, Android or Multiplatform plugin." }
         }
     }
-}
 
-internal class LibraryGradlePlugin : BaseGradlePlugin() {
-    override val commonMainOnly: Boolean = false
-    override val processor: String = "library"
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean = true
+    override fun getCompilerPluginId(): String = "io.github.pedro-bachiega.easy-navigation"
+    override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(GROUP, ARTIFACT, PLUGIN_VERSION)
+
+    override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
+        val project = kotlinCompilation.target.project
+        kotlinCompilation.compileTaskProvider.configure { dependsOn(project.tasks.named("generateEasyNavigation")) }
+        return project.provider { emptyList() }
+    }
 }

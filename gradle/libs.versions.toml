@@ -23,13 +23,12 @@ jetbrains-compose-material3 = "1.12.0-alpha03"
 jetbrains-compose-material3-adaptive = "1.3.0-beta02"
 jetbrains-compose-navigation = "1.2.0-alpha02"
 jetbrains-dokka = "2.2.0"
-jetbrains-kotlin = "2.3.21"
+jetbrains-kotlin = "2.4.20"
 jetbrains-kotlin-gradle-dsl = "6.6.4"
 jetbrains-kover = "0.9.9"
 jetbrains-serialization = "1.11.0"
 
 ## Google
-google-ksp = "2.3.11"
 kotlinpoet = "2.3.0"
 
 ## Gradle
@@ -46,6 +45,7 @@ test-mockk = "1.14.11"
 # ------------------------------------------------------------------------------------------------ #
 [libraries]
 ## JetBrains
+jetbrains-kotlin-compiler = { group = "org.jetbrains.kotlin", name = "kotlin-compiler-embeddable", version.ref = "jetbrains-kotlin" }
 jetbrains-stdlib-jdk8 = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8", version.ref = "jetbrains-kotlin" }
 jetbrains-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "jetbrains-serialization" }
 
@@ -69,9 +69,7 @@ jetbrains-compose-ui-util = { group = "org.jetbrains.compose.ui", name = "ui-uti
 toolkit-arch-lumber = { group = "io.github.matheus-corregiari", name = "arch-lumber", version.ref = "toolkit-arch-lumber" }
 
 ## Tools
-google-ksp = { group = "com.google.devtools.ksp", name = "symbol-processing-api", version.ref = "google-ksp" }
 kotlinpoet = { group = "com.squareup", name = "kotlinpoet", version.ref = "kotlinpoet" }
-kotlinpoet-ksp = { group = "com.squareup", name = "kotlinpoet-ksp", version.ref = "kotlinpoet" }
 lint-detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-formatting", version.ref = "detekt" }
 
 ## Testing
@@ -101,7 +99,6 @@ android-application = { id = "com.android.application", version.ref = "android-p
 android-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "android-plugin" }
 
 ## Android
-google-ksp = { id = "com.google.devtools.ksp", version.ref = "google-ksp" }
 
 ## JetBrains
 jetbrains-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "jetbrains-kotlin" }
