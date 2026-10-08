@@ -6,8 +6,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class TransitionFallbackTest {
-    private val route = object : SceneTransitions {}
-    private val global = object : SceneTransitions {}
+    private val route: SceneTransitions = object : SceneTransitions {}
+    private val global: SceneTransitions = object : SceneTransitions {}
 
     @Test
     fun `partial policies omit all callbacks by default`() {
