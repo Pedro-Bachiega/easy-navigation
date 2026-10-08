@@ -25,6 +25,7 @@ import com.pedrobneto.easy.navigation.core.model.NavigationResult
 import com.pedrobneto.easy.navigation.core.modal.ModalScope
 import com.pedrobneto.easy.navigation.core.transition.NavigationOperation
 import com.pedrobneto.easy.navigation.core.transition.NavigationTransitionChange
+import com.pedrobneto.easy.navigation.core.transition.TRANSITION_ROUTE_METADATA_KEY
 import com.pedrobneto.easy.navigation.core.transition.navigationOperation
 import com.pedrobneto.easy.navigation.test.KoverExcludes
 import kotlinx.serialization.InternalSerializationApi
@@ -219,7 +220,7 @@ class NavigationController internal constructor(
      * Provides a [NavEntry] for a given [NavigationRoute], allowing the navigation framework
      * to render the correct composable for each route.
      */
-    internal val directionProvider: (NavigationRoute) -> NavEntry<NavigationRoute> = entryProvider {
+    private val registeredDirectionProvider: (NavigationRoute) -> NavEntry<NavigationRoute> = entryProvider {
         directions.forEach { direction ->
             addEntryProvider(
                 clazz = direction.routeClass,
@@ -227,6 +228,15 @@ class NavigationController internal constructor(
                 content = direction::Draw
             )
         }
+    }
+
+    internal val directionProvider: (NavigationRoute) -> NavEntry<NavigationRoute> = { route ->
+        val entry = registeredDirectionProvider(route)
+        NavEntry(
+            key = route,
+            contentKey = entry.contentKey,
+            metadata = entry.metadata + (TRANSITION_ROUTE_METADATA_KEY to route),
+        ) { entry.Content() }
     }
 
     /**

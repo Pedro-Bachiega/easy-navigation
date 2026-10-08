@@ -25,20 +25,20 @@ class RouteSceneTest {
 
     @Test
     fun `custom scenes may reorder entries without changing the logical top`() {
-        val entries = listOf<NavEntry<NavigationRoute>>(NavEntry(home) {}, NavEntry(details) {})
+        val entries = listOf(routeEntry(home), routeEntry(details))
         val original = TestScene("custom", entries.reversed())
         val strategies = routeSceneStrategies(listOf(SceneStrategy { original }), emptyList(), null)
         val captured = with(strategies.strategies.single()) { scope.calculateScene(entries) }
         val scene = assertIs<RouteScene>(captured)
 
         assertSame(details, scene.route)
-        assertSame(home, scene.entries.last().key)
+        assertSame(home, scene.entries.last().transitionRoute)
         assertSame(original, scene.scene)
     }
 
     @Test
     fun `consumer decorators see original scene types and retain the snapshot`() {
-        val entries = listOf<NavEntry<NavigationRoute>>(NavEntry(home) {})
+        val entries = listOf(routeEntry(home))
         val original = TestScene("original", entries)
         val decorated = TestScene("decorated", entries)
         val strategies = routeSceneStrategies(
@@ -66,7 +66,7 @@ class RouteSceneTest {
 
     @Test
     fun `a rejected strategy retains navigation3 single pane fallback`() {
-        val entries = listOf<NavEntry<NavigationRoute>>(NavEntry(home) {})
+        val entries = listOf(routeEntry(home))
         val strategies = routeSceneStrategies(listOf(SceneStrategy { null }), emptyList(), null)
         val scene = assertIs<RouteScene>(with(strategies.strategies.single()) { scope.calculateScene(entries) })
         assertSame(home, scene.route)
@@ -75,7 +75,7 @@ class RouteSceneTest {
 
     @Test
     fun `overlay scenes remain unwrapped`() {
-        val entries = listOf<NavEntry<NavigationRoute>>(NavEntry(home) {}, NavEntry(details) {})
+        val entries = listOf(routeEntry(home), routeEntry(details))
         val overlay = TestOverlay(TestScene("modal", entries), entries.dropLast(1))
         val strategies = routeSceneStrategies(listOf(SceneStrategy { overlay }), emptyList(), null)
         val scene = with(strategies.strategies.single()) { scope.calculateScene(entries) }
@@ -91,7 +91,7 @@ class RouteSceneTest {
         val scene = assertIs<RouteScene>(with(strategies.strategies.single()) { scope.calculateScene(entries) })
         assertIs<AdaptiveSceneStrategy.DualPaneScene>(scene.scene)
         assertSame(details, scene.route)
-        assertSame(home, scene.entries.last().key)
+        assertSame(home, scene.entries.last().transitionRoute)
     }
 
     @Test
@@ -111,17 +111,25 @@ class RouteSceneTest {
     }
 
     private fun adaptiveEntries(): List<NavEntry<NavigationRoute>> = listOf(
-        NavEntry(home, metadata = mapOf(
+        routeEntry(home, metadata = mapOf(
             NavigationDirection.METADATA_ROUTE_KEY to home::class.qualifiedName.orEmpty(),
             NavigationDirection.METADATA_STRATEGY_KEY to PaneStrategy.Adaptive(),
-        )) {},
-        NavEntry(details, metadata = mapOf(
+        )),
+        routeEntry(details, metadata = mapOf(
             NavigationDirection.METADATA_STRATEGY_KEY to PaneStrategy.Extra(
                 PaneStrategy.Extra.PaneHost(TestRoute::class, .5f)
             ),
-        )) {},
+        )),
     )
 }
+
+private fun routeEntry(
+    route: NavigationRoute,
+    metadata: Map<String, Any> = emptyMap(),
+): NavEntry<NavigationRoute> = NavEntry(
+    route,
+    metadata = metadata + (TRANSITION_ROUTE_METADATA_KEY to route),
+) {}
 
 private class AlternateScene(scene: Scene<NavigationRoute>) : Scene<NavigationRoute> by scene
 

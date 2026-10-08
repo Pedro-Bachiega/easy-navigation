@@ -2,6 +2,7 @@ package com.pedrobneto.easy.navigation.core.transition
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.OverlayScene
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneDecoratorStrategy
@@ -9,6 +10,13 @@ import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import com.pedrobneto.easy.navigation.core.NavigationController
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+
+internal const val TRANSITION_ROUTE_METADATA_KEY = "com.pedrobneto.easy.navigation.transition.route"
+
+internal val NavEntry<NavigationRoute>.transitionRoute: NavigationRoute
+    get() = requireNotNull(metadata[TRANSITION_ROUTE_METADATA_KEY] as? NavigationRoute) {
+        "Navigation entries must preserve the route metadata provided by NavigationController."
+    }
 
 /**
  * Captures the logical stack when the scene is calculated, including projected predictive-back
@@ -60,7 +68,7 @@ internal fun routeSceneStrategies(
         if (scene is OverlayScene<NavigationRoute>) {
             scene
         } else {
-            RouteScene(scene, entries.map { it.key }, change)
+            RouteScene(scene, entries.map { it.transitionRoute }, change)
         }
     }
     val capturingDecorator = SceneDecoratorStrategy<NavigationRoute> { captured ->

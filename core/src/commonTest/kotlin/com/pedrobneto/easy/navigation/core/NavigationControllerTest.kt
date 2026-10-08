@@ -11,6 +11,7 @@ import com.pedrobneto.easy.navigation.core.model.NavigationResult
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.core.modal.ModalScope
 import com.pedrobneto.easy.navigation.core.transition.NavigationOperation
+import com.pedrobneto.easy.navigation.core.transition.transitionRoute
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
@@ -157,6 +158,14 @@ class NavigationControllerTest {
         assertEquals(before, change.before)
         assertEquals(listOf(TestSettingsRoute), change.after)
         assertEquals(NavigationOperation.NewStack, change.operation)
+    }
+
+    @Test
+    fun `entry metadata retains the exact route instance for scene snapshots`() {
+        val route = TestDetailsRoute(42)
+        val entry = controller.directionProvider(route)
+        assertTrue(entry.transitionRoute === route)
+        assertEquals(TestDetailsRoute::class.qualifiedName, entry.metadata[NavigationDirection.METADATA_ROUTE_KEY])
     }
 
     @Test
