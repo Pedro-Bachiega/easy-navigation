@@ -1,10 +1,16 @@
 package fixture
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
-import com.pedrobneto.easy.navigation.core.annotation.*
 import com.pedrobneto.easy.navigation.core.adaptive.*
+import com.pedrobneto.easy.navigation.core.annotation.*
 import com.pedrobneto.easy.navigation.core.modal.Modal
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
+import com.pedrobneto.easy.navigation.core.transition.DefaultTransitionSpec
+import com.pedrobneto.easy.navigation.core.transition.NavigationOperation
+import com.pedrobneto.easy.navigation.core.transition.SceneTransitions
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -12,7 +18,19 @@ data object Home : NavigationRoute
 @Serializable
 data class Details(val id: Long) : NavigationRoute
 @Serializable
-data object Account : NavigationRoute
+data object Account : NavigationRoute {
+    override fun transitions(): SceneTransitions = AccountTransitions
+}
+
+object AccountTransitions : SceneTransitions {
+    override val transitionSpec: DefaultTransitionSpec = { context ->
+        if (context.operation == NavigationOperation.NewStack) {
+            fadeIn() togetherWith fadeOut()
+        } else {
+            null
+        }
+    }
+}
 @Serializable
 data object Dialog : NavigationRoute
 @Serializable

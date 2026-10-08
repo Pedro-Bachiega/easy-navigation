@@ -16,6 +16,23 @@ import kotlinx.serialization.modules.polymorphic
 
 class RegistryBehaviorTest {
     @Test
+    fun routePolicySurvivesGeneratedRegistrySerialization() {
+        val json = Json {
+            serializersModule = SerializersModule {
+                polymorphic(NavigationRoute::class) {
+                    AccountDirectionRegistry.registerAll(this)
+                }
+            }
+        }
+        val serializer = PolymorphicSerializer(NavigationRoute::class)
+        val restored = json.decodeFromString(serializer, json.encodeToString(serializer, Account))
+        assertEquals(Account, restored)
+        assertEquals(AccountTransitions, restored.transitions())
+        assertEquals(null, restored.transitions()?.popTransitionSpec)
+        assertEquals(null, restored.transitions()?.predictivePopTransitionSpec)
+    }
+
+    @Test
     fun registryIncludesSharedAndOnlyTheCurrentPlatform() {
         val names = FeatureDirectionRegistry.directions.map { it.routeClass.simpleName }.toSet()
         val sampleRoutes = setOf("HomeRoute", "DetailsRoute", "DetailsOverviewRoute", "DetailsActivityRoute",

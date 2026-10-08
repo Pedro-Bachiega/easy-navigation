@@ -348,10 +348,76 @@ Navigation(
     initialRoute = HomeRoute,
     directionRegistries = registries,
     transitions = NavigationTransitions(
-        regular = DefaultRegularSceneTransitions(),
+        regular = DefaultRegularSceneTransitions,
     )
 )
 ```
+
+Each route can provide its own policy without being referenced by the module that configures
+`Navigation`. Shared interfaces extending `NavigationRoute` can identify flows across features:
+
+```kotlin
+interface AuthenticatedRoute : NavigationRoute
+
+@Serializable
+data object LoginRoute : NavigationRoute {
+    override fun transitions(): SceneTransitions = LoginTransitions
+}
+
+object LoginTransitions : SceneTransitions {
+    override val transitionSpec: DefaultTransitionSpec = { context ->
+        if (context.from is AuthenticatedRoute &&
+            context.operation == NavigationOperation.NewStack
+        ) {
+            fadeIn() togetherWith fadeOut()
+        } else {
+            null // Use the app's configured global policy.
+        }
+    }
+}
+
+controller.navigateTo(LoginRoute, strategy = LaunchStrategy.NewStack)
+```
+
+Callbacks receive a `RouteTransitionContext` with non-null `from` and `to` routes, original
+`fromScene` and `toScene` instances (after consumer decorators), and `operation`. Routes are the
+logical top of the stack at each end, not the last element of `Scene.entries`. This works with
+multi-pane and custom scenes, a replaced stack, and multi-entry pops. Predictive back uses the
+projected destination before the gesture is committed, and retains its policy and swipe edge
+while completing or cancelling the gesture.
+
+Forward navigation, `SingleTop`, and `NewStack` use the destination route's policy. Pop and
+predictive pop use the departing route's policy. Each callback independently falls back from
+the route to `NavigationTransitions.regular`, then to `DefaultRegularSceneTransitions` when
+absent or returning null. Predictive pop never inherits a custom regular pop callback.
+Returning `DefaultRegularSceneTransitions.none()` explicitly disables animation instead of
+requesting a fallback.
+
+The operation distinguishes `Forward`, `SingleTop`, `NewStack`, `Pop`, `PredictivePop`, and
+`SceneChange`. Layout changes can have `from == to` and still run the callback. External stack
+edits or mutations coalesced before display use `Unknown`; they do not guess controller intent.
+Initial presentation and restoration do not invoke route or global transition callbacks.
+Modal overlays retain their own animations. Navigation 3 scene metadata transition overrides
+retain their existing precedence over the display's regular callbacks.
+
+The built-in policy is now a stateless object with public helpers. Use `fullSlideIn()` or
+`fullSlideOut()` to slide the entire scene. Use `transitionTo` or `popTo` to preserve the adaptive
+pane behavior:
+
+```kotlin
+override val transitionSpec: DefaultTransitionSpec = { context ->
+    when (context.from) {
+        is AuthenticatedRoute -> fadeIn() togetherWith fadeOut()
+        else -> with(DefaultRegularSceneTransitions) {
+            context.fromScene transitionTo context.toScene
+        }
+    }
+}
+```
+
+This is a breaking API change: remove `()` from `DefaultRegularSceneTransitions()` and update
+custom callback signatures to accept context. Predictive callbacks receive `(context, swipeEdge)`.
+All three callback properties are optional and callback results are now `ContentTransform?`.
 
 ## Code generation
 

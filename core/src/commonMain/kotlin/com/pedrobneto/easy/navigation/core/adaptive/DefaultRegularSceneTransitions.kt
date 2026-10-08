@@ -1,26 +1,41 @@
 package com.pedrobneto.easy.navigation.core.adaptive
 
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
+import androidx.navigationevent.NavigationEvent
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.core.transition.DefaultTransitionSpec
 import com.pedrobneto.easy.navigation.core.transition.PredictiveTransitionSpec
 import com.pedrobneto.easy.navigation.core.transition.SceneTransitions
+import com.pedrobneto.easy.navigation.core.transition.originalScene
 import kotlin.math.roundToInt
 
-class DefaultRegularSceneTransitions : SceneTransitions {
-    override val transitionSpec: DefaultTransitionSpec = { initialState transitionTo targetState }
-    override val popTransitionSpec: DefaultTransitionSpec = { initialState popTo targetState }
-    override val predictivePopTransitionSpec: PredictiveTransitionSpec =
-        defaultPredictivePopTransitionSpec()
+/** Stateless built-in policy and reusable animation helpers. */
+object DefaultRegularSceneTransitions : SceneTransitions {
+    override val transitionSpec: DefaultTransitionSpec = { context ->
+        context.fromScene transitionTo context.toScene
+    }
+    override val popTransitionSpec: DefaultTransitionSpec = { context ->
+        context.fromScene popTo context.toScene
+    }
+    override val predictivePopTransitionSpec: PredictiveTransitionSpec = { _, swipeEdge ->
+        predictivePop(this, swipeEdge)
+    }
 
-    internal infix fun Scene<NavigationRoute>.transitionTo(target: Scene<NavigationRoute>): ContentTransform {
+    private val defaultPredictiveSpec = defaultPredictivePopTransitionSpec<NavigationRoute>()
+
+    /** Forward fallback preserving the built-in adaptive pane behavior. */
+    infix fun Scene<NavigationRoute>.transitionTo(target: Scene<NavigationRoute>): ContentTransform {
+        if (this !== originalScene || target !== target.originalScene) {
+            return originalScene transitionTo target.originalScene
+        }
         val targetIsDualPane = target is AdaptiveSceneStrategy.DualPaneScene
         val currentIsDualPane = this is AdaptiveSceneStrategy.DualPaneScene
         val currentIsAdaptivePane = this is AdaptiveSceneStrategy.AdaptivePaneScene
@@ -36,7 +51,11 @@ class DefaultRegularSceneTransitions : SceneTransitions {
         }
     }
 
-    internal infix fun Scene<NavigationRoute>.popTo(target: Scene<NavigationRoute>): ContentTransform {
+    /** Pop fallback preserving the built-in adaptive pane behavior. */
+    infix fun Scene<NavigationRoute>.popTo(target: Scene<NavigationRoute>): ContentTransform {
+        if (this !== originalScene || target !== target.originalScene) {
+            return originalScene popTo target.originalScene
+        }
         val targetIsDualPane = target is AdaptiveSceneStrategy.DualPaneScene
         val currentIsDualPane = this is AdaptiveSceneStrategy.DualPaneScene
         val targetIsAdaptivePane = target is AdaptiveSceneStrategy.AdaptivePaneScene
@@ -55,7 +74,8 @@ class DefaultRegularSceneTransitions : SceneTransitions {
         slideInHorizontally { fullWidth -> (fullWidth * target.entryRatio).roundToInt() } togetherWith
                 slideOutHorizontally { fullWidth -> -(fullWidth * target.entryRatio).roundToInt() }
 
-    private fun fullSlideIn(): ContentTransform =
+    /** Slide the entire scene forward, independently of the adaptive pane layout. */
+    fun fullSlideIn(): ContentTransform =
         slideInHorizontally { fullWidth -> fullWidth } togetherWith
                 slideOutHorizontally { fullWidth -> -fullWidth }
 
@@ -65,12 +85,19 @@ class DefaultRegularSceneTransitions : SceneTransitions {
         slideInHorizontally { fullWidth -> -(fullWidth * current.entryRatio).roundToInt() } togetherWith
                 slideOutHorizontally { fullWidth -> (fullWidth * current.entryRatio).roundToInt() }
 
-    private fun fullSlideOut(): ContentTransform =
+    /** Slide the entire scene back, independently of the adaptive pane layout. */
+    fun fullSlideOut(): ContentTransform =
         slideInHorizontally { fullWidth -> -fullWidth } togetherWith
                 slideOutHorizontally { fullWidth -> fullWidth }
 
     private fun extraFadeOut(): ContentTransform = none()
 
-    private fun none(): ContentTransform =
-        fadeIn(initialAlpha = 1f) togetherWith fadeOut(targetAlpha = 1f)
+    /** Explicitly disable animation; unlike null, this does not request a fallback. */
+    fun none(): ContentTransform = EnterTransition.None togetherWith ExitTransition.None
+
+    /** Predictive fallback driven by Navigation 3's gesture animation. */
+    fun predictivePop(
+        scope: AnimatedContentTransitionScope<Scene<NavigationRoute>>,
+        @NavigationEvent.SwipeEdge swipeEdge: Int,
+    ): ContentTransform = defaultPredictiveSpec.invoke(scope, swipeEdge)
 }

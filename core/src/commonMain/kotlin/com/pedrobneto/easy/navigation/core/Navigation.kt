@@ -5,6 +5,7 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntryDecorator
@@ -16,6 +17,9 @@ import com.pedrobneto.easy.navigation.core.adaptive.rememberDefaultSceneStrategi
 import com.pedrobneto.easy.navigation.core.model.DirectionRegistry
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.core.transition.NavigationTransitions
+import com.pedrobneto.easy.navigation.core.transition.RouteTransitionResolver
+import com.pedrobneto.easy.navigation.core.transition.TransitionKind
+import com.pedrobneto.easy.navigation.core.transition.rememberRouteSceneStrategies
 import com.pedrobneto.easy.navigation.test.KoverExcludes
 import kotlinx.serialization.json.Json
 
@@ -53,19 +57,27 @@ fun Navigation(
     LocalNavigationController provides controller,
     LocalParentNavigationController provides controller
 ) {
+    val routeScenes = rememberRouteSceneStrategies(controller, sceneStrategies, sceneDecoratorStrategies)
+    val resolver = remember(controller) { RouteTransitionResolver() }
     NavDisplay(
         modifier = modifier,
         backStack = controller.backStack,
         entryProvider = controller.directionProvider,
         contentAlignment = contentAlignment,
         entryDecorators = entryDecorators,
-        sceneStrategies = sceneStrategies,
-        sceneDecoratorStrategies = sceneDecoratorStrategies,
+        sceneStrategies = routeScenes.strategies,
+        sceneDecoratorStrategies = routeScenes.decorators,
         sharedTransitionScope = sharedTransitionScope,
         sizeTransform = sizeTransform,
-        transitionSpec = transitions.regular.transitionSpec,
-        popTransitionSpec = transitions.regular.popTransitionSpec,
-        predictivePopTransitionSpec = transitions.regular.predictivePopTransitionSpec,
+        transitionSpec = {
+            resolver.resolve(this, transitions.regular, TransitionKind.Forward)
+        },
+        popTransitionSpec = {
+            resolver.resolve(this, transitions.regular, TransitionKind.Pop)
+        },
+        predictivePopTransitionSpec = { swipeEdge ->
+            resolver.resolve(this, transitions.regular, TransitionKind.PredictivePop, swipeEdge)
+        },
         onBack = controller::handleSystemBack,
     )
 }
