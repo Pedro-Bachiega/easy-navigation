@@ -10,6 +10,7 @@ import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationResult
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.core.modal.ModalScope
+import com.pedrobneto.easy.navigation.core.transition.NavigationOperation
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
@@ -145,6 +146,39 @@ class NavigationControllerTest {
             directionRegistryList = listOf(testRegistry),
             json = Json { ignoreUnknownKeys = true }
         )
+    }
+
+    @Test
+    fun `transition intent captures the whole NewStack mutation`() {
+        controller.navigateTo(TestDetailsRoute(1))
+        val before = controller.backStack.toList()
+        controller.navigateTo(TestSettingsRoute, LaunchStrategy.NewStack)
+        val change = assertNotNull(controller.transitionChange)
+        assertEquals(before, change.before)
+        assertEquals(listOf(TestSettingsRoute), change.after)
+        assertEquals(NavigationOperation.NewStack, change.operation)
+    }
+
+    @Test
+    fun `transition intent captures multi pop before removing its source`() {
+        controller.navigateTo(TestDetailsRoute(1))
+        controller.navigateTo(TestSettingsRoute)
+        val before = controller.backStack.toList()
+        controller.popUpTo(TestHomeRoute)
+        val change = assertNotNull(controller.transitionChange)
+        assertEquals(before, change.before)
+        assertEquals(listOf(TestHomeRoute), change.after)
+        assertEquals(NavigationOperation.Pop, change.operation)
+    }
+
+    @Test
+    fun `single top transition intent retains the old arguments`() {
+        controller.navigateTo(TestDetailsRoute(1))
+        controller.navigateTo(TestDetailsRoute(2), LaunchStrategy.SingleTop())
+        val change = assertNotNull(controller.transitionChange)
+        assertEquals(listOf(TestHomeRoute, TestDetailsRoute(1)), change.before)
+        assertEquals(listOf(TestHomeRoute, TestDetailsRoute(2)), change.after)
+        assertEquals(NavigationOperation.SingleTop, change.operation)
     }
 
     // region navigateUp / safeNavigateUp

@@ -23,6 +23,9 @@ import com.pedrobneto.easy.navigation.core.model.NavigationDirection
 import com.pedrobneto.easy.navigation.core.model.NavigationRoute
 import com.pedrobneto.easy.navigation.core.model.NavigationResult
 import com.pedrobneto.easy.navigation.core.modal.ModalScope
+import com.pedrobneto.easy.navigation.core.transition.NavigationOperation
+import com.pedrobneto.easy.navigation.core.transition.NavigationTransitionChange
+import com.pedrobneto.easy.navigation.core.transition.navigationOperation
 import com.pedrobneto.easy.navigation.test.KoverExcludes
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
@@ -182,6 +185,10 @@ class NavigationController internal constructor(
     private val resultCallbacks = mutableMapOf<Long, (NavigationResultCompletion) -> Unit>()
     private var navigationMutationDepth = 0
     private val deferredResultDispatches = mutableSetOf<Long>()
+    private val transitionChangeState = mutableStateOf<NavigationTransitionChange?>(null)
+
+    internal val transitionChange: NavigationTransitionChange?
+        get() = transitionChangeState.value
 
     @PublishedApi
     internal val directions: List<NavigationDirection> =
@@ -253,7 +260,9 @@ class NavigationController internal constructor(
      * destination on the stack.
      */
     fun navigateTo(route: NavigationRoute, strategy: LaunchStrategy = LaunchStrategy.Default) =
-        withNavigationMutation { strategy.handleNavigation(route = route, controller = this) }
+        withNavigationMutation(strategy.navigationOperation) {
+            strategy.handleNavigation(route = route, controller = this)
+        }
 
     /**
      * Confirms the result for the current destination and navigates up.
@@ -327,19 +336,27 @@ class NavigationController internal constructor(
         launcherId: Long,
     ): Boolean {
         if (isResultLauncherPending(launcherId)) return false
-        withNavigationMutation {
+        withNavigationMutation(strategy.navigationOperation) {
             strategy.handleNavigation(route, this, launcherId)
         }
         return true
     }
 
-    private inline fun <T> withNavigationMutation(block: () -> T): T {
+    private inline fun <T> withNavigationMutation(
+        operation: NavigationOperation,
+        block: () -> T,
+    ): T {
+        val before = if (navigationMutationDepth == 0) backStack.toList() else null
         navigationMutationDepth++
         return try {
             block()
         } finally {
             navigationMutationDepth--
             if (navigationMutationDepth == 0) {
+                val after = backStack.toList()
+                if (before != null && before != after) {
+                    transitionChangeState.value = NavigationTransitionChange(before, after, operation)
+                }
                 deferredResultDispatches.toList().forEach(::dispatchCompletion)
                 deferredResultDispatches.clear()
             }
@@ -616,7 +633,12 @@ class NavigationController internal constructor(
         runCatching { popUpTo(direction, inclusive) }.isSuccess
 
     @Throws(IllegalStateException::class)
-    private fun popUpTo(targetRouteIndex: Int, inclusive: Boolean = false) {
+    private fun popUpTo(targetRouteIndex: Int, inclusive: Boolean = false): Unit =
+        withNavigationMutation(NavigationOperation.Pop) {
+            popUpToInternal(targetRouteIndex, inclusive)
+        }
+
+    private fun popUpToInternal(targetRouteIndex: Int, inclusive: Boolean) {
         val parentDeeplink = currentDirection.parentDeeplink
         val parentRouteClass = currentDirection.parentRouteClass
         val hasParent = parentDeeplink != null || parentRouteClass != null
