@@ -8,5 +8,5 @@ import com.pedrobneto.easy.navigation.core.adaptive.DefaultRegularSceneTransitio
  * Regular navigation scenes.
  */
 data class NavigationTransitions(
-    val regular: SceneTransitions = DefaultRegularSceneTransitions(),
+    val regular: SceneTransitions = DefaultRegularSceneTransitions,
 )
