@@ -94,6 +94,6 @@ Add or update tests near the affected behavior. For generated code, prefer compi
   generated behavior; `sample:app` consumes its public registries without the compiler plugin.
 - No sample module applies publishing plugins. CI stages only library artifacts in its temporary repository.
 - Validate with CI only when instructed by the user; do not run local builds/tests in this migration.
-- PR CI compiles common metadata/JVM/Android and links iOS frameworks on macOS.
+- PR CI runs Kotlin lint, JVM tests, and common metadata/JVM/Android compilation without target packaging or native linking. PRs from release/* or hotfix/* branches additionally run full checks, published-consumer verification, Android/desktop assembly, and iOS compilation/framework linking on macOS.
 - Code is generated before compilation using compiler PSI. FIR validates semantic route requirements
   in the normal compilation. No IR body generation is needed; Compose/Serialization compile the sources.
