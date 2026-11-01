@@ -45,6 +45,9 @@ jobs:
       - name: Test compiler generation
         run: ./gradlew :compiler-plugin:test --no-daemon
 
+      - name: Test Gradle plugin Kotlin compatibility
+        run: ./gradlew :easy-navigation-gradle-plugin:test --no-daemon
+
       - name: Compile generated common and JVM consumer APIs
         run: ./gradlew :sample:app:compileCommonMainKotlinMetadata :sample:app:compileKotlinJvm :sample:feature:jvmTest --no-daemon
 

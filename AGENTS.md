@@ -89,7 +89,7 @@ Add or update tests near the affected behavior. For generated code, prefer compi
 
 ## Compiler migration verification
 
-- Kotlin support is pinned to 2.4.20; upgrades require a compatibility CI run.
+- Consumer Kotlin support covers stable 2.4.x releases; the isolated PSI generator and repository build use 2.4.20. Compiler upgrades require a compatibility CI run.
 - `sample:feature` has shared and platform destinations in custom source directories and tests
   generated behavior; `sample:app` consumes its public registries without the compiler plugin.
 - No sample module applies publishing plugins. CI stages only library artifacts in its temporary repository.

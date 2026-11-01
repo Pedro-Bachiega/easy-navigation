@@ -2,7 +2,6 @@ package com.pedrobneto.easy.navigation.compiler
 
 internal const val CORE = "com.pedrobneto.easy.navigation.core"
 internal const val REGISTRY_PACKAGE = "com.pedrobneto.easy.navigation.registry"
-internal const val SUPPORTED_KOTLIN = "2.4.20"
 internal const val PLUGIN_ID = "io.github.pedro-bachiega.easy-navigation"
 
 internal data class Destination(
