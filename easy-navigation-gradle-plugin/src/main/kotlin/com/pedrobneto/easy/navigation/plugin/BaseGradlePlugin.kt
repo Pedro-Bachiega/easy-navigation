@@ -49,6 +49,10 @@ class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
             pluginManager.withPlugin(id) {
                 // AGP's static Kotlin source view drops producer dependencies (KT-59503).
                 tasks.withType(ExtractAnnotations::class.java).configureEach { dependsOn(generate) }
+                // AGP also derives baseline-profile directories from its static source view.
+                tasks.matching { it.name.startsWith("prepare") && it.name.endsWith("ArtProfile") }.configureEach {
+                    dependsOn(generate)
+                }
             }
         }
 
