@@ -221,10 +221,11 @@ kotlin {
 }
 ```
 
-Easy Navigation supports Kotlin **2.4.20**. Use the same version for Kotlin, Compose Compiler,
+Easy Navigation supports stable Kotlin **2.4.x** releases. Use the same version for Kotlin, Compose Compiler,
 and the Kotlin Serialization compiler plugin. The existing Easy Navigation plugin automatically
 resolves `io.github.pedro-bachiega:easy-navigation-compiler-plugin` at its own version; consumers
-do not declare a compiler dependency or configure a generation DSL.
+do not declare a compiler dependency or configure a generation DSL. The isolated source generator
+uses Kotlin 2.4.20 independently of the project's Kotlin patch version.
 
 ### Migrating from KSP
 

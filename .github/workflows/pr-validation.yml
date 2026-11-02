@@ -17,6 +17,8 @@ jobs:
   validate:
     name: Validate PR
     runs-on: ubuntu-latest
+    env:
+      FULL_VALIDATION: ${{ startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'hotfix/') }}
 
     steps:
       - name: Checkout
@@ -45,25 +47,42 @@ jobs:
       - name: Test compiler generation
         run: ./gradlew :compiler-plugin:test --no-daemon
 
+      - name: Test Gradle plugin Kotlin compatibility
+        run: ./gradlew :easy-navigation-gradle-plugin:test --no-daemon
+
+      - name: Lint Kotlin sources
+        env:
+          LINT_PRINT_STACKTRACE: "true"
+        run: ./gradlew detekt --no-daemon
+
+      - name: Test runtime
+        run: ./gradlew :core:jvmTest --no-daemon
+
       - name: Compile generated common and JVM consumer APIs
         run: ./gradlew :sample:app:compileCommonMainKotlinMetadata :sample:app:compileKotlinJvm :sample:feature:jvmTest --no-daemon
 
-      - name: Compile Android consumer APIs
-        run: ./gradlew :sample:target:android:assembleDebug :sample:app:compileAndroidMain --no-daemon
+      - name: Compile Android and desktop consumer APIs
+        run: ./gradlew :sample:target:android:compileDebugKotlin :sample:app:compileAndroidMain :sample:target:desktop:compileKotlinJvm --no-daemon
 
       - name: Validate FIR errors and incremental consumer compilation
         run: bash .github/scripts/verify-compiler-consumer.sh
 
       - name: Compile a consumer from published artifacts
+        if: env.FULL_VALIDATION == 'true'
         run: bash .github/scripts/verify-published-consumer.sh
 
-      - name: Run checks
+      - name: Build Android and desktop targets
+        if: env.FULL_VALIDATION == 'true'
+        run: ./gradlew :sample:target:android:assembleDebug :sample:target:android:assembleRelease :sample:target:desktop:assemble --no-daemon
+
+      - name: Run all checks
+        if: env.FULL_VALIDATION == 'true'
         env:
           LINT_PRINT_STACKTRACE: "true"
         run: ./gradlew check --no-daemon
 
       - name: Upload published consumer generated sources
-        if: always()
+        if: always() && env.FULL_VALIDATION == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: published-consumer-generated-sources
@@ -71,6 +90,7 @@ jobs:
 
   native:
     name: Compile iOS consumers
+    if: startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'hotfix/')
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
@@ -93,6 +113,8 @@ jobs:
         run: ./gradlew :sample:app:linkDebugFrameworkIosArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
       - name: Link iOS Simulator ARM64 sample framework
         run: ./gradlew :sample:app:linkDebugFrameworkIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
+      - name: Link release iOS frameworks
+        run: ./gradlew :sample:app:linkReleaseFrameworkIosArm64 :sample:app:linkReleaseFrameworkIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
       - name: Save Kotlin Native cache
         if: always() && steps.konan-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
