@@ -13,7 +13,8 @@ import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 
-private const val SUPPORTED_KOTLIN = "2.4.20"
+// The PSI generator runs in isolation with the compiler it was built against.
+private const val GENERATOR_KOTLIN = "2.4.20"
 private const val ARTIFACT = "easy-navigation-compiler-plugin"
 private const val GROUP = "io.github.pedro-bachiega"
 private val PLUGIN_VERSION: String by lazy {
@@ -30,7 +31,7 @@ class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
             description = "Isolated Kotlin source generator for Easy Navigation"
         }
         dependencies.add(generator.name, "$GROUP:$ARTIFACT:$PLUGIN_VERSION")
-        dependencies.add(generator.name, "org.jetbrains.kotlin:kotlin-compiler-embeddable:$SUPPORTED_KOTLIN")
+        dependencies.add(generator.name, "org.jetbrains.kotlin:kotlin-compiler-embeddable:$GENERATOR_KOTLIN")
         val generate = tasks.register("generateEasyNavigation", GenerateNavigationTask::class.java) {
             group = "easy navigation"
             description = "Generates Kotlin directions and platform registries without KSP"
@@ -48,6 +49,10 @@ class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
             pluginManager.withPlugin(id) {
                 // AGP's static Kotlin source view drops producer dependencies (KT-59503).
                 tasks.withType(ExtractAnnotations::class.java).configureEach { dependsOn(generate) }
+                // AGP also derives baseline-profile directories from its static source view.
+                tasks.matching { it.name.startsWith("prepare") && it.name.endsWith("ArtProfile") }.configureEach {
+                    dependsOn(generate)
+                }
             }
         }
 
@@ -56,8 +61,9 @@ class LibraryGradlePlugin : KotlinCompilerPluginSupportPlugin {
             pluginManager.withPlugin(id) {
                 if (kotlinConfigured) return@withPlugin
                 kotlinConfigured = true
-                check(getKotlinPluginVersion() == SUPPORTED_KOTLIN) {
-                    "Easy Navigation supports Kotlin $SUPPORTED_KOTLIN; found ${getKotlinPluginVersion()}. Align Kotlin, Compose Compiler and Serialization plugin versions."
+                val kotlinVersion = getKotlinPluginVersion()
+                check(isSupportedKotlinVersion(kotlinVersion)) {
+                    "Easy Navigation supports Kotlin 2.4.x; found $kotlinVersion. Align Kotlin, Compose Compiler and Serialization plugin versions."
                 }
                 // Default hierarchy edges are created after ordinary afterEvaluate callbacks.
                 // Read the KGP graph only after refines edges have been finalized.

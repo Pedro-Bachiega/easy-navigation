@@ -20,6 +20,7 @@ dependencies {
     compileOnly(gradleApi())
     implementation(libs.plugin.jetbrains.kotlin.plugin)
     compileOnly(libs.plugin.androidx.plugin)
+    testImplementation(kotlin("test"))
 }
 
 sourceSets {
