@@ -113,8 +113,12 @@ jobs:
         run: ./gradlew :sample:app:linkDebugFrameworkIosArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
       - name: Link iOS Simulator ARM64 sample framework
         run: ./gradlew :sample:app:linkDebugFrameworkIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
-      - name: Link release iOS frameworks
-        run: ./gradlew :sample:app:linkReleaseFrameworkIosArm64 :sample:app:linkReleaseFrameworkIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g
+      # Release optimization needs more heap than debug linking. Separate invocations
+      # release the compiler heap between targets on the macOS runner.
+      - name: Link release iOS ARM64 framework
+        run: ./gradlew :sample:app:linkReleaseFrameworkIosArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx4g
+      - name: Link release iOS Simulator ARM64 framework
+        run: ./gradlew :sample:app:linkReleaseFrameworkIosSimulatorArm64 --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs=-Xmx4g
       - name: Save Kotlin Native cache
         if: always() && steps.konan-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
