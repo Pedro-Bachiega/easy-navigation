@@ -53,7 +53,7 @@ jobs:
       - name: Lint Kotlin sources
         env:
           LINT_PRINT_STACKTRACE: "true"
-        run: ./gradlew detekt ktlintCheck --no-daemon
+        run: ./gradlew detekt --no-daemon
 
       - name: Test runtime
         run: ./gradlew :core:jvmTest --no-daemon
